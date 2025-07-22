@@ -85,9 +85,9 @@ class ContingencyLoginAuthenticator extends AbstractLoginFormAuthenticator
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
         $sessionLifetime = $this->entityManager->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_SESSION_LIFETIME]);
-        $minutes = $sessionLifetime->getValue() || 10;
+        $minutes = ((int) $sessionLifetime->getValue()) || 10;
         if ($sessionLifetime) {
-            $request->getSession()->migrate(false, $minutes * 60);
+            $request->getSession()->migrate(false, (int) $minutes * 60);
         }
 
         if ($targetPath = $this->getTargetPath($request->getSession(), $firewallName)) {
