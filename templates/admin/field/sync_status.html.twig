@@ -1,0 +1,10 @@
+{% set status_class = 'secondary' %}
+{% if field.value == 'success' %}
+    {% set status_class = 'success' %}
+{% elseif field.value == 'failed' %}
+    {% set status_class = 'danger' %}
+{% elseif field.value == 'in_progress' %}
+    {% set status_class = 'warning' %}
+{% endif %}
+
+<span class="badge badge-{{ status_class }}">{{ field.formattedValue|upper }}</span>

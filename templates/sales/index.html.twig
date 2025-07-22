@@ -1,0 +1,62 @@
+{% extends 'tool_base.html.twig' %}
+
+{% block page_title %}Caja{% endblock %}
+
+{% block form_content %}
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Buscar Cotización</h5>
+            {{ form_start(form, { action: path('app_sales') }) }}
+                <div class="input-group">
+                    {{ form_widget(form.quote_id) }}
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+
+    {% if quote is defined and quote is not null %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Detalles de la Cotización #{{ quote.id }}</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>RUT:</strong> {{ quote.rut }}</p>
+                        <p><strong>Monto:</strong> ${{ quote.amount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Interés:</strong> {{ quote.interest }}%</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Monto de la cuota:</strong> ${{ quote.installmentAmount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Monto total:</strong> ${{ quote.totalAmount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Número de cuotas:</strong> {{ quote.installments }}</p>
+                        <p><strong>Fecha de la cotización:</strong> {{ quote.quoteDate|date('d-m-Y') }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-end">
+                {{ form_start(sale_form, { action: path('app_sales_accept') }) }}
+                    {{ form_widget(sale_form.quote) }}
+                    <div class="d-inline-flex gap-2">
+                        {{ form_widget(sale_form.folio) }}
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-circle"></i> Aceptar Venta
+                        </button>
+                    </div>
+                {{ form_end(sale_form) }}
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "@EasyAdmin/layout.html.twig" %}
+{% form_theme form with "system_parameter/form_theme.html.twig" %}
+
+{% block content_title %}
+Editar configuración de sistema
+{% endblock %}
+
+{% block page_actions %}
+<button class="btn btn-primary" type="submit" form="{{ form.vars.id }}">
+        <span class="btn-label"><span class="action-label">Guardar</span></span>
+    </button>
+{% endblock page_actions %}
+
+{% block main %}
+{{ form_start(form, {attr:  { id: form.vars.id } }) }}
+{{ form_end(form) }}
+{% endblock %}

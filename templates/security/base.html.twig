@@ -1,0 +1,40 @@
+{# @var ea \EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext #}
+
+<!DOCTYPE html>
+<html>
+<head>
+        <meta charset="UTF-8">
+
+        <link rel="shortcut icon" href="{{ asset('favicon.png') }}" type="image/x-icon">
+        <link rel="stylesheet" href="{{ asset("assets/bootstrap.min.css") }}">
+        <link rel="stylesheet" href="{{ asset("/bundles/easyadmin/app.css") }}">
+        <title>MC - Ingreso</title>
+
+        <style>
+          body {
+              font-family: "Lato", sans-serif;
+              height: 100vh;
+          }
+        </style>
+
+
+    <body>
+        <div class="h-100" style="height: 100%;">
+            <div class="row h-100 justify-content-center align-items-center" style="display: flex; flex-direction: row; justify-content: center; align-items: center; height: 100%;">
+              <div class="card" style="width: 400px;">
+                <div class="card-body">
+                  <div align="center" class="login-form">
+                    {% block form_content %}
+                    {% endblock form_content %}
+                  </div>
+                </div>
+              </div>
+            </div>
+        </div>
+     {% block javascripts %}
+     {% block importmap %}{{ importmap('app') }}
+     {% endblock importmap %}
+     {% endblock javascripts %}
+</body>
+</html>
+

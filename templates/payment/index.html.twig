@@ -1,0 +1,80 @@
+{% extends 'tool_base.html.twig' %}
+{% form_theme form 'bootstrap_5_layout.html.twig' %}
+
+{% block page_title %}Registrar Pago{% endblock %}
+
+{% block form_content %}
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endfor %}
+
+    <div class="card">
+        <div class="card-body">
+            {{ form_start(form) }}
+            <div class="row">
+                <div class="col-md-6">
+                    {{ form_row(form.rut) }}
+                    <div id="alerts-rut"></div>
+                    {{ form_row(form.amount) }}
+                    {{ form_row(form.paymentMethod) }}
+                    {{ form_row(form.voucherId) }}
+                    <button type="submit" class="btn btn-primary">Registrar Pago</button>
+                </div>
+                <div class="col-md-6">
+                    <h5 class="card-title">Información del Cliente</h5>
+                    <div id="panel-client">
+                        <p class="text-muted">Ingrese un RUT para ver la información del cliente.</p>
+                    </div>
+                </div>
+            </div>
+            {{ form_end(form) }}
+        </div>
+    </div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    const debounce = (callback, wait) => {
+        let timeoutId = null;
+        return (...args) => {
+            window.clearTimeout(timeoutId);
+            timeoutId = window.setTimeout(() => {
+                callback.apply(null, args);
+            }, wait);
+        };
+    }
+
+    const rutInput = document.querySelector('#payment_form_rut');
+    const alertsRut = document.querySelector('#alerts-rut');
+    const panelClient = document.querySelector('#panel-client');
+
+    if (rutInput) {
+        rutInput.addEventListener('keyup', debounce((evt) => {
+            panelClient.innerHTML = "";
+            alertsRut.innerHTML = "";
+            let rut = rutInput.value;
+            fetch(`{{ path('app_payment_rut') }}?rut=${rut}`)
+                .then(response => {
+                    const isSuccess = response.status === 200;
+                    document.querySelectorAll('form[name="payment_form"] input:not(#payment_form_rut), form[name="payment_form"] select')
+                        .forEach(e => e.disabled = !isSuccess);
+                    return response.text().then(content => {
+                        alertsRut.innerHTML = content;
+                        return isSuccess;
+                    });
+                })
+                .then(isSuccess => {
+                    if (!isSuccess) return;
+                    fetch(`{{ path('app_payment_client') }}?rut=${rut}`)
+                        .then(response => response.text())
+                        .then(content => panelClient.innerHTML = content);
+                });
+        }, 500));
+    }
+</script>
+{% endblock %}

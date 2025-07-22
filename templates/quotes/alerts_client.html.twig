@@ -1,0 +1,10 @@
+{% set message = is_rut_valid(rut) %}
+{% if message != "true" %}
+<div class="alert alert-warning" role="alert">
+ {{ message }}
+</div>
+{% elseif client == false %}
+<div class="alert alert-danger" role="alert">
+  El cliente con el RUT {{ rut }} no está registrado en el sistema.
+</div>
+{% endif %}

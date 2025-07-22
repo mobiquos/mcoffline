@@ -1,0 +1,34 @@
+<fieldset disabled>
+    <legend>Información del cliente</legend>
+    <div class="mb-3">
+        <label for="client-fullname" class="form-label">Nombre</label>
+        <input type="text" id="client-fullname" class="form-control" value="{{ client.fullName }}">
+    </div>
+    <div class="row mb-3">
+        <div class="col">
+            <div class="">
+                <label for="client-credit-limit" class="form-label">Cupo autorizado</label>
+                <input type="text" id="client-credit-limit" class="form-control"
+                    value="$ {{ client.creditLimit|number_format(0, ',', '.') }}">
+            </div>
+        </div>
+        <div class="col">
+            <div class="">
+                <label for="client-credit-available" class="form-label">Cupo disponible</label>
+                <input type="text" id="client-credit-available" class="form-control"
+                    value="$ {{ client.creditAvailable|number_format(0, ',', '.') }}">
+            </div>
+        </div>
+        <div class="col">
+            <div class="">
+                <label for="client-overdue" class="form-label">Deuda</label>
+                <input type="text" id="client-overdue" class="form-control"
+                    value="$ {{ client.overdue|number_format(0, ',', '.') }}">
+            </div>
+        </div>
+    </div>
+    <div class="mb-3">
+        <label for="client-block-comment" class="form-label">Bloqueos</label>
+        <input type="text" id="client-block-comment" class="form-control" value="{{ client.blockComment }}">
+    </div>
+</fieldset>

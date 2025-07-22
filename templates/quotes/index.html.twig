@@ -1,0 +1,21 @@
+{% extends 'tool_base.html.twig' %}
+
+{% block page_title %}Simulador de Créditos{% endblock %}
+
+{% block form_content %}
+    {% for flash_message in app.flashes('success') %}
+        <div class="alert alert-success">{{ flash_message }}</div>
+    {% endfor %}
+
+    <div class="row justify-content-center">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    {% include 'quotes/form_simulator.html.twig' with {form: form} %}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+

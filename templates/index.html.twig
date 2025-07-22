@@ -1,0 +1,45 @@
+{% extends 'base.html.twig' %}
+
+{% block page_title %}Bienvenido{% endblock %}
+
+{% block form_content %}
+    <div class="container text-center">
+        <h1 class="mb-4">Seleccione una Tarea</h1>
+        <p class="lead mb-5">Por favor, elija la operación que desea realizar.</p>
+        <div class="row justify-content-center">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Simulador de Créditos</h5>
+                        <p class="card-text">Crear y guardar una nueva cotización de crédito.</p>
+                        <a href="{{ path('app_quotes') }}" class="btn btn-primary">
+                            <i class="bi bi-calculator"></i> Ir al Simulador
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Caja</h5>
+                        <p class="card-text">Buscar una cotización y registrarla como una venta.</p>
+                        <a href="{{ path('app_sales') }}" class="btn btn-primary">
+                            <i class="bi bi-cart-check"></i> Ir a Caja
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Registrar Pago</h5>
+                        <p class="card-text">Registrar un nuevo pago en el sistema.</p>
+                        <a href="{{ path('app_payment') }}" class="btn btn-primary">
+                            <i class="bi bi-cash-coin"></i> Registrar Pago
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
