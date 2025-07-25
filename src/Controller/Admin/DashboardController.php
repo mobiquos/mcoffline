@@ -10,6 +10,7 @@ use App\Entity\Payment;
 use App\Entity\Quote;
 use App\Entity\Sale;
 use App\Entity\SyncEvent;
+use App\Entity\SystemDocument;
 use App\Entity\SystemParameter;
 use App\Entity\User;
 use App\Entity\Location;
@@ -89,6 +90,7 @@ class DashboardController extends AbstractDashboardController
             if (current($contingency)) {
             }
         }
+        yield MenuItem::linkToRoute('Ir a herramientas', 'fas fa-tool', 'home');
 
         yield MenuItem::section("Información contingencia");
         yield MenuItem::linkToCrud('Cotizaciones', 'fas fa-dollar', Quote::class);
@@ -108,6 +110,7 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToCrud('Locales', 'fas fa-building', Location::class);
         yield MenuItem::linkToCrud('Dispositivos', 'fas fa-device', Device::class);
         yield MenuItem::linkToRoute('Parámetros de sistema', 'fas fa-gears', 'admin_system_parameter_config');
+        yield MenuItem::linkToCrud('Manual de usuario', 'fas fa-book', SystemDocument::class);
     }
 
     public function configureAssets(): Assets

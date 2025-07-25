@@ -9,6 +9,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\BooleanField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\ChoiceField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\EmailField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\FormField;
@@ -86,7 +87,9 @@ class UserCrudController extends AbstractCrudController
         return [
             BooleanField::new('enabled', "Habilitado")->renderAsSwitch(),
             TextField::new('rut', "RUT"),
+            TextField::new('code', "Código"),
             TextField::new('fullName', "Nombre completo del usuario"),
+            AssociationField::new('location', 'Tienda'),
             FormField::addPanel("Credenciales")->onlyOnForms(),
             ChoiceField::new('roles', "Roles dentro del sistema")->onlyOnForms()->setRequired(true)->setChoices(User::ROLES)->allowMultipleChoices(true),
             TextField::new('plainPassword', "Nueva contraseña")->onlyOnForms(),

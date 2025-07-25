@@ -37,6 +37,7 @@ class ClientCrudController extends AbstractCrudController
             TextField::new('secondLastName', 'Apellido materno'),
             IntegerField::new('creditLimit', 'Cupo total'),
             IntegerField::new('creditAvailable', 'Cupo disponible'),
+            IntegerField::new('originalCreditAvailable', 'Cupo disponible original'),
             TextField::new('blockComment', 'Bloqueos'),
             IntegerField::new('overdue', 'S. Vencido'),
             DateField::new('nextBillingAt', 'F.Prox.Facturación'),

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Client;
 use App\Entity\Quote;
 use App\Entity\Sale;
 use App\Form\QuoteSearchFormType;
@@ -66,7 +67,11 @@ class SalesController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $sale->setContingency($quote->getContingency());
 
+            $client = $em->getRepository(Client::class)->findOneBy(['rut' => $sale->getRut()]);
+            $client->setCreditAvailable($client->getCreditAvailable() - $sale->getQuote()->getAmount());
+
             $em->persist($sale);
+            $em->persist($client);
             $em->flush();
 
             // Invalidate the session

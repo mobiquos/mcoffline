@@ -33,6 +33,9 @@ class Client
     #[ORM\Column]
     private ?int $creditAvailable = null;
 
+    #[ORM\Column(nullable: true)]
+    private ?int $originalCreditAvailable = null;
+
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $blockComment = null;
 
@@ -119,6 +122,18 @@ class Client
     public function setCreditAvailable(int $creditAvailable): static
     {
         $this->creditAvailable = $creditAvailable;
+
+        return $this;
+    }
+
+    public function getOriginalCreditAvailable(): ?int
+    {
+        return $this->originalCreditAvailable;
+    }
+
+    public function setOriginalCreditAvailable(?int $originalCreditAvailable): static
+    {
+        $this->originalCreditAvailable = $originalCreditAvailable;
 
         return $this;
     }

@@ -27,7 +27,11 @@ class PaymentController extends AbstractController
             $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
             $payment->setContingency($contingency);
 
+            $client = $em->getRepository(Client::class)->findOneBy(['rut' => $payment->getRut()]);
+            $client->setCreditAvailable($client->getCreditAvailable() + $payment->getAmount());
+
             $em->persist($payment);
+            $em->persist($client);
             $em->flush();
 
             $this->addFlash('success', 'Pago registrado exitosamente.');

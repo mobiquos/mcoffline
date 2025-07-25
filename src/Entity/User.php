@@ -9,6 +9,7 @@ use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
+use App\Validator\Rut;
 use Symfony\Component\Validator\Constraints\Length;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
@@ -29,6 +30,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\Column]
     private ?int $id = null;
 
+    #[Rut]
     #[Length(max:9)]
     #[ORM\Column(length: 9, nullable: true, unique: true)]
     private ?string $rut = null;
@@ -36,6 +38,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Length(max:255)]
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $fullName = null;
+
+    #[ORM\Column(length: 10, unique: true)]
+    private ?string $code = null;
 
     #[ORM\Column(length: 100)]
     private ?string $password = null;
@@ -47,6 +52,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column]
     private ?bool $enabled = true;
+
+    #[ORM\ManyToOne]
+    private ?Location $location = null;
 
 
     public function getId(): ?int
@@ -143,6 +151,30 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setEnabled(bool $enabled): static
     {
         $this->enabled = $enabled;
+
+        return $this;
+    }
+
+    public function getLocation(): ?Location
+    {
+        return $this->location;
+    }
+
+    public function setLocation(?Location $location): static
+    {
+        $this->location = $location;
+
+        return $this;
+    }
+
+    public function getCode(): ?string
+    {
+        return $this->code;
+    }
+
+    public function setCode(string $code): static
+    {
+        $this->code = $code;
 
         return $this;
     }

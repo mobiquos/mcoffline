@@ -54,27 +54,33 @@ class ContingencyLoginAuthenticator extends AbstractLoginFormAuthenticator
 
         $user = $passport->getUser();
 
-        if (!(in_array(User::ROLE_ADMIN, $user->getRoles(), true) or in_array(User::ROLE_SUPER_USER, $user->getRoles(), true))) {
-            if (in_array('ROLE_USER', $user->getRoles(), true)) {
+        if (!$user->isEnabled()) {
+            throw new CustomUserMessageAuthenticationException('El usuario no está habilitado para iniciar sesión.');
+        }
 
+        if (!(in_array(User::ROLE_ADMIN, $user->getRoles(), true) or in_array(User::ROLE_SUPER_USER, $user->getRoles(), true))) {
+            if (in_array(User::ROLE_USER, $user->getRoles(), true)) {
                 $locationCode = $this->entityManager->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
                 if (!$locationCode) {
-                    throw new CustomUserMessageAuthenticationException(
-                        'La configuración del sistema está incompleta.'
-                    );
+                    throw new CustomUserMessageAuthenticationException('La configuración del sistema está incompleta.');
                 }
+
                 $location = $this->entityManager->getRepository(Location::class)->findOneBy(['code' => (string) $locationCode->getValue()]);
-                if ($location) {
-                    throw new CustomUserMessageAuthenticationException(
-                        'El local indicado en la configuración no corresponde a uno de los locales registrados.'
-                    );
+                if (!$location) {
+                    throw new CustomUserMessageAuthenticationException('El local indicado en la configuración no corresponde a uno de los locales registrados.');
+                }
+
+                if (!$user->getLocation()) {
+                    throw new CustomUserMessageAuthenticationException('Este usuario no tiene una tienda asignada.');
+                }
+
+                if ($user->getLocation()->getId() !== $location->getId()) {
+                    throw new CustomUserMessageAuthenticationException('El usuario no pertenece a esta tienda.');
                 }
 
                 $activeContingency = $this->entityManager->getRepository(Contingency::class)->findOneBy(['location' => $location, 'endedAt' => null], ['id' => 'DESC']);
                 if (!$activeContingency) {
-                    throw new CustomUserMessageAuthenticationException(
-                        'El inicio de sesión para este usuario solo está permitido durante un período de contingencia activo.'
-                    );
+                    throw new CustomUserMessageAuthenticationException('El inicio de sesión para este usuario solo está permitido durante un período de contingencia activo.');
                 }
             }
         }
@@ -85,7 +91,7 @@ class ContingencyLoginAuthenticator extends AbstractLoginFormAuthenticator
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
         $sessionLifetime = $this->entityManager->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_SESSION_LIFETIME]);
-        $minutes = ((int) $sessionLifetime->getValue()) || 10;
+        $minutes = ((int) $sessionLifetime->getValue() ?? 10);
         if ($sessionLifetime) {
             $request->getSession()->migrate(false, (int) $minutes * 60);
         }
