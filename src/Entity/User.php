@@ -7,12 +7,14 @@ use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
 use App\Validator\Rut;
 use Symfony\Component\Validator\Constraints\Length;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
+#[UniqueEntity('code')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     public const ROLE_ADMIN = "ROLE_ADMIN";
@@ -40,6 +42,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $fullName = null;
 
     #[ORM\Column(length: 10, unique: true)]
+    #[Length(min:3)]
     private ?string $code = null;
 
     #[ORM\Column(length: 100)]
@@ -138,7 +141,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     public function setRut(string $r): static
     {
-        $this->rut = $r;
+        $this->rut = str_replace(["-", "."], "", $r);
 
         return $this;
     }

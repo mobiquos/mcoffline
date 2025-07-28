@@ -6,9 +6,11 @@ use App\Repository\LocationRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use Symfony\Component\Validator\Constraints\Length;
 
 #[ORM\Entity(repositoryClass: LocationRepository::class)]
+#[UniqueEntity('code')]
 class Location
 {
     #[ORM\Id]
@@ -35,6 +37,9 @@ class Location
      */
     #[ORM\OneToMany(targetEntity: Device::class, mappedBy: 'location')]
     private Collection $devices;
+
+    #[ORM\Column(nullable: true)]
+    private ?bool $enabled = null;
 
     public function __construct()
     {
@@ -131,6 +136,18 @@ class Location
                 $device->setLocation(null);
             }
         }
+
+        return $this;
+    }
+
+    public function isEnabled(): ?bool
+    {
+        return $this->enabled;
+    }
+
+    public function setEnabled(?bool $enabled): static
+    {
+        $this->enabled = $enabled;
 
         return $this;
     }

@@ -195,22 +195,22 @@ class Client
 
         // Quitar los últimos 2 valores (el guión y el dígito verificador) y luego verificar que sólo sea
         // numérico
-        $parteNumerica = str_replace(substr($rut, -2, 2), '', $rut);
+        $parteNumerica = str_replace(substr($rut, -1, 1), '', $rut);
 
         if (!preg_match("/^[0-9]*$/", $parteNumerica)) {
             return 'La parte numérica del RUT sólo debe contener números.';
         }
 
-        $guionYVerificador = substr($rut, -2, 2);
+        $guionYVerificador = substr($rut, -1, 1);
         // Verifica que el guion y dígito verificador tengan un largo de 2.
-        if (strlen($guionYVerificador) != 2) {
+        if (strlen($guionYVerificador) != 1) {
             return 'Error en el largo del dígito verificador.';
         }
 
         // obliga a que el dígito verificador tenga la forma -[0-9] o -[kK]
-        if (!preg_match('/(^[-]{1}+[0-9kK]).{0}$/', $guionYVerificador)) {
-            return 'El dígito verificador no cuenta con el patrón requerido';
-        }
+        /* if (!preg_match('/(^[-]{1}+[0-9kK]).{0}$/', $guionYVerificador)) { */
+        /*     return 'El dígito verificador no cuenta con el patrón requerido'; */
+        /* } */
 
         // Valida que sólo sean números, excepto el último dígito que pueda ser k
         if (!preg_match("/^[0-9.]+[-]?+[0-9kK]{1}/", $rut)) {

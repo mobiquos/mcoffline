@@ -7,10 +7,10 @@ use Symfony\Component\Validator\Constraint;
 #[\Attribute(\Attribute::TARGET_CLASS)]
 class Payment extends Constraint
 {
-    public $message = 'The RUT "{{ rut }}" is not valid.';
-    public $clientNotFoundMessage = 'The client with RUT "{{ rut }}" does not exist.';
-    public $voucherRequiredMessage = 'The voucher ID is required for this payment method.';
-    public $voucherExistsMessage = 'The voucher ID "{{ voucherId }}" already exists in the current contingency.';
+    public $message = 'El RUT "{{ rut }}" no es valido.';
+    public $clientNotFoundMessage = 'El cliente con RUT "{{ rut }}" no existe.';
+    public $voucherRequiredMessage = 'El ID del voucher es obligatorio para el método de pago indicado.';
+    public $voucherExistsMessage = 'El ID "{{ voucherId }}" ya existe durante la contingencia actual.';
 
     public function __construct(
         public string $mode = 'strict',

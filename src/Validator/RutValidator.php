@@ -16,7 +16,7 @@ class RutValidator extends ConstraintValidator
             return;
         }
 
-        $result = Client::validateRut($value);
+        $result = Client::validateRut(str_replace(["-", "."], "", $value));
 
         if (true !== $result) {
             $this->context->buildViolation($constraint->message)

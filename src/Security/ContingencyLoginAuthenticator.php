@@ -70,6 +70,9 @@ class ContingencyLoginAuthenticator extends AbstractLoginFormAuthenticator
                     throw new CustomUserMessageAuthenticationException('El local indicado en la configuración no corresponde a uno de los locales registrados.');
                 }
 
+                if (!$location->getEnabled()) {
+                    throw new CustomUserMessageAuthenticationException('El local indicado está desactivado.');
+                }
                 if (!$user->getLocation()) {
                     throw new CustomUserMessageAuthenticationException('Este usuario no tiene una tienda asignada.');
                 }
