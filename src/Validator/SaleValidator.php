@@ -20,17 +20,17 @@ class SaleValidator extends ConstraintValidator
             return;
         }
 
-        if (!Client::validateRut($value->getRut())) {
+        if (!Client::validateRut($value->getQuote()->getRut())) {
             $this->context->buildViolation($constraint->message)
-                ->setParameter('{{ rut }}', $value->getRut())
+                ->setParameter('{{ rut }}', $value->getQuote()->getRut())
                 ->atPath('rut')
                 ->addViolation();
         }
 
-        $client = $this->em->getRepository(Client::class)->findOneBy(['rut' => str_replace(['.', '-'], '', $value->getRut())]);
+        $client = $this->em->getRepository(Client::class)->findOneBy(['rut' => str_replace(['.', '-'], '', $value->getQuote()->getRut())]);
         if (!$client) {
             $this->context->buildViolation($constraint->clientNotFoundMessage)
-                ->setParameter('{{ rut }}', $value->getRut())
+                ->setParameter('{{ rut }}', $value->getQuote()->getRut())
                 ->atPath('rut')
                 ->addViolation();
         }
