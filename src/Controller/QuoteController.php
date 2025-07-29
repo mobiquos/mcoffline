@@ -75,7 +75,7 @@ class QuoteController extends AbstractController
             $tokenStorage->setToken(null);
             $request->getSession()->invalidate();
 
-            return $this->render('quotes/success.html.twig');
+            return $this->render('quotes/success.html.twig', ['entity' => $data]);
         }
 
         return $this->render('quotes/index.html.twig', $templateParams);
