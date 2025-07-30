@@ -24,6 +24,9 @@ class SaleFormType extends AbstractType
             ->add('folio', TextType::class, [
                 'label' => 'Folio de venta',
                 'required' => true,
+                'attr' => [
+                  'placeholder' => 'Comprobante'
+                ]
             ]);
     }
 
