@@ -28,7 +28,7 @@ class PaymentController extends AbstractController
             $payment->setContingency($contingency);
 
             $client = $em->getRepository(Client::class)->findOneBy(['rut' => $payment->getRut()]);
-            $client->setCreditAvailable($client->getCreditAvailable() + $payment->getAmount());
+            $client->setCreditAvailable(min($client->getCreditAvailable() + $payment->getAmount(), $client->getCreditLimit()));
 
             $em->persist($payment);
             $em->persist($client);

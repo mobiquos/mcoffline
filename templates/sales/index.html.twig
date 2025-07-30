@@ -27,6 +27,25 @@
     </div>
 
     {% if quote is defined and quote is not null %}
+        {% if client is defined and client is not null %}
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Información del Cliente</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>RUT:</strong> {{ client.rut }}</p>
+                            <p><strong>Nombre:</strong> {{ client.fullName }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Cupo disponible:</strong> ${{ client.creditAvailable|number_format(0, ',', '.') }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Detalles de la Cotización #{{ quote.id }}</h5>
@@ -34,7 +53,6 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <p><strong>RUT:</strong> {{ quote.rut }}</p>
                         <p><strong>Monto:</strong> ${{ quote.amount|number_format(0, ',', '.') }}</p>
                         <p><strong>Interés:</strong> {{ quote.interest }}%</p>
                     </div>

@@ -23,6 +23,7 @@ class SalesController extends AbstractController
         $form = $this->createForm(QuoteSearchFormType::class);
         $form->handleRequest($request);
         $quote = null;
+        $client = null;
         $sale = new Sale();
 
         if ($form->isSubmitted() && $form->isValid()) {
@@ -38,6 +39,7 @@ class SalesController extends AbstractController
                     $this->addFlash('danger', 'La cotización ya fue aceptada.');
                     $quote = null;
                 }
+                $client = $em->getRepository(Client::class)->findOneBy(['rut' => $quote->getRut()]);
             }
         }
 
@@ -50,6 +52,7 @@ class SalesController extends AbstractController
         return $this->render('sales/index.html.twig', [
             'form' => $form->createView(),
             'quote' => $quote,
+            'client' => $client,
             'sale_form' => $saleForm->createView(),
         ]);
     }
