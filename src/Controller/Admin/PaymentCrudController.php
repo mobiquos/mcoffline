@@ -2,15 +2,21 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Contingency;
 use App\Entity\Payment;
+use App\Entity\Quote;
+use Doctrine\ORM\EntityManagerInterface;
+use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
+use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PaymentCrudController extends AbstractCrudController
 {
@@ -22,7 +28,7 @@ class PaymentCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
-            ->setEntityLabelInPlural('Pagos')
+            ->setEntityLabelInPlural('Pagos contingencia')
             ->setEntityLabelInSingular('Pago')
             ->setPageTitle(Crud::PAGE_INDEX, 'Pagos')
             ->setHelp(Crud::PAGE_INDEX, 'Listado de pagos registrados en el sistema.');
@@ -36,14 +42,50 @@ class PaymentCrudController extends AbstractCrudController
             DateTimeField::new('createdAt', 'Fecha/Hora'),
             TextField::new('rut', 'RUT'),
             IntegerField::new('amount', 'Monto'),
-            TextField::new('paymentMethod', 'Método de pago'),
+            TextField::new('paymentMethod', 'Método de pago')->setTemplatePath('admin/field/payment_method.html.twig'),
             TextField::new('voucherId', 'ID de voucher'),
         ];
     }
 
     public function configureActions(Actions $actions): Actions
     {
+        $exportAction = Action::new('export', 'Exportar', 'fa fa-download')
+            ->linkToCrudAction('exportCsv')
+            ->setCssClass('btn btn-success')
+            ->createAsGlobalAction();
+
         return $actions
-            ->disable(Action::DELETE, Action::EDIT);
+            ->add(Crud::PAGE_INDEX, $exportAction)
+            ->disable(Action::DELETE, Action::EDIT, Action::NEW);
+    }
+
+    #[AdminAction(routeName: 'export_csv', routePath: '/export/csv')]
+    public function exportCsv(AdminContext $context, EntityManagerInterface $em): StreamedResponse
+    {
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
+        $payments = $em->getRepository(Payment::class)->findBy(['contingency' => $contingency]);
+
+        $response = new StreamedResponse(function () use ($payments) {
+            $handle = fopen('php://output', 'w+');
+            fputcsv($handle, ['Fecha', 'Agencia', 'RUT', 'Monto Pago', 'Medio Pago', 'Comprobante Externo'], ';');
+
+            foreach ($payments as $q) {
+                fputcsv($handle, [
+                    $q->getCreatedAt()->format('d-m-Y'),
+                    $q->getContingency()->getLocation()->getCode(),
+                    $q->getRut(),
+                    $q->getAmount(),
+                    $q->getPaymentMethod(),
+                    $q->getVoucherId(),
+                ], ';');
+            }
+
+            fclose($handle);
+        });
+
+        $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
+        $response->headers->set('Content-Disposition', 'attachment; filename="contingency_sales.csv"');
+
+        return $response;
     }
 }

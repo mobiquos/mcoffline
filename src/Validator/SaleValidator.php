@@ -35,6 +35,18 @@ class SaleValidator extends ConstraintValidator
                 ->addViolation();
         }
 
+        $quoteNotValid = $this->em->getRepository(SaleEntity::class)->findOneBy([
+            'quote' => $value->getQuote(),
+            'contingency' => $value->getContingency(),
+        ]);
+
+        if ($quoteNotValid) {
+            $this->context->buildViolation($constraint->quoteNotValidMessage)
+                ->setParameter('{{ quote }}', $value->getQuote()->getId())
+                ->atPath('folio')
+                ->addViolation();
+        }
+
         $existingSale = $this->em->getRepository(SaleEntity::class)->findOneBy([
             'folio' => $value->getFolio(),
             'contingency' => $value->getContingency(),

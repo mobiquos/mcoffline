@@ -11,6 +11,9 @@ class Payment extends Constraint
     public $clientNotFoundMessage = 'El cliente con RUT "{{ rut }}" no existe.';
     public $voucherRequiredMessage = 'El ID del voucher es obligatorio para el método de pago indicado.';
     public $voucherExistsMessage = 'El ID "{{ voucherId }}" ya existe durante la contingencia actual.';
+    public $amountNotDivisibleBy10Message = 'El monto para pagos en efectivo debe ser divisible por 10.';
+    public $clientWithoutDebtMessage = 'El cliente no tiene deuda pendiente.';
+    public $maxPaymentAmountMessage = 'El monto del pago supera el máximo permitido.';
 
     public function __construct(
         public string $mode = 'strict',

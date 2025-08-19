@@ -16,6 +16,18 @@ class SyncEventRepository extends ServiceEntityRepository
         parent::__construct($registry, SyncEvent::class);
     }
 
+    public function findLastSuccessful(): ?SyncEvent
+    {
+        return $this->createQueryBuilder('s')
+            ->andWhere('s.status = :status')
+            ->setParameter('status', SyncEvent::STATUS_SUCCESS)
+            ->orderBy('s.createdAt', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult()
+        ;
+    }
+
 //    /**
 //     * @return SyncEvent[] Returns an array of SyncEvent objects
 //     */

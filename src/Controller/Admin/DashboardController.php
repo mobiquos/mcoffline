@@ -21,7 +21,10 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Assets;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Dashboard;
 use EasyCorp\Bundle\EasyAdminBundle\Config\MenuItem;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Option\ColorScheme;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
+use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGeneratorInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
@@ -35,43 +38,81 @@ class DashboardController extends AbstractDashboardController
         ]);
     }
 
-    public function index(): Response
+    #[Route('/admin/sync-status', name: 'admin_sync_status')]
+    public function dailySyncStatus(): Response
     {
-        $params = [
-            'location_code' => null,
-            'location' => null,
-            'contingency' => null,
-        ];
         $em = $this->container->get('doctrine');
+        $locations = $em->getRepository(Location::class)->findAll();
+        $syncData = [];
 
-        $locationCodeParam = $em->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
-        if ($locationCodeParam) {
-            $locationCode = $locationCodeParam->getValue();
-            $params['location_code'] = $locationCode;
+        foreach ($locations as $location) {
+            $today = new \DateTime();
 
-            $location = $em->getRepository(Location::class)->findOneBy(['code' => $locationCode]);
-            if ($location) {
-                $params['location'] = $location;
-                $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null], ['id' => 'DESC']);
-                $params['contingency'] = $contingency;
+            $qb = $em->getRepository(SyncEvent::class)->createQueryBuilder('s');
+            $qb->where('s.location = :location')
+                ->setParameter('location', $location)
+                ->orderBy('s.id', 'DESC');
 
-                if ($contingency) {
-                    $report = $em->getRepository(Sale::class)->getContingencyReport($contingency);
-                    $params['contingency_report'] = $report;
-                }
-            }
+            $syncEvents = $qb->getQuery()->getResult();
+            $syncData[$location->getName()] = $syncEvents;
         }
 
-        $lastSyncEvent = $em->getRepository(SyncEvent::class)->findOneBy(['status' => SyncEvent::STATUS_SUCCESS], ['createdAt' => 'DESC']);
-        $params['last_sync_event'] = $lastSyncEvent;
+        return $this->render('admin/sync_status.html.twig', [
+            'syncData' => $syncData,
+        ]);
+    }
 
-        return $this->render('admin/index.html.twig', $params);
+    public function configureCrud(): Crud
+    {
+        return (Crud::new())->setEntityPermission(User::ROLE_USER);
+    }
+
+    #[Route('/admin/dashboard', name: 'admin_index')]
+    public function adminIndex(): Response
+    {
+        $locations = $this->container->get('doctrine')->getRepository(Location::class)->findAll();
+        $data = [];
+
+        foreach ($locations as $location) {
+            $lastSyncEvent = $this->container->get('doctrine')->getRepository(SyncEvent::class)->findOneBy(['location' => $location], ['createdAt' => 'DESC']);
+            $deviceCount = $this->container->get('doctrine')->getRepository(Device::class)->count(['location' => $location]);
+            $userCount = $this->container->get('doctrine')->getRepository(User::class)->count(['location' => $location]);
+
+            $data[] = [
+                'location' => $location,
+                'lastSyncEvent' => $lastSyncEvent,
+                'deviceCount' => $deviceCount,
+                'userCount' => $userCount,
+            ];
+        }
+
+        return $this->render('admin/index.html.twig', [
+            'data' => $data,
+        ]);
+    }
+
+    public function index(): Response
+    {
+        if ($this->isGranted(User::ROLE_SUPER_ADMIN)) {
+            return $this->redirectToRoute('admin_index');
+        }
+
+        if ($this->isGranted(User::ROLE_ADMIN)) {
+            return $this->redirectToRoute('admin_index');
+        }
+
+        if ($this->isGranted(User::ROLE_LOCATION_ADMIN)) {
+            return $this->redirectToRoute('admin_contingency_open_close');
+        }
+
+        return "ERROR";
     }
 
     public function configureDashboard(): Dashboard
     {
         return Dashboard::new()
             ->setLocales(['es'])
+            ->setDefaultColorScheme(ColorScheme::LIGHT)
             ->setTitle('<img src="/images/logo-text.png">')
             ->setFaviconPath('/images/multicentro-favicon-32x32.png')
         ;
@@ -79,38 +120,36 @@ class DashboardController extends AbstractDashboardController
 
     public function configureMenuItems(): iterable
     {
-        yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home');
 
+        /** @var AdminUrlGeneratorInterface $urlGenerator */
+        $urlGenerator = $this->container->get(AdminUrlGenerator::class);
         $em = $this->container->get('doctrine');
         $locationCode = $em->getRepository(SystemParameter::class)->find(SystemParameter::PARAM_LOCATION_CODE);
         $location = $em->getRepository(Location::class)->findOneBy(['code' => $locationCode]);
 
-        if ($location) {
-            $contingency = $em->getRepository(Contingency::class)->findOneBy(['location' => current($location), 'endedAt' => null, ['id' => 'DESC']]);
-            if (current($contingency)) {
-            }
-        }
-        yield MenuItem::linkToRoute('Ir a herramientas', 'fas fa-tool', 'home');
+        yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home')->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Abrir/Cerrar Contingencia', 'fas fa-tool', Contingency::class)->setAction('openClose');
+        yield MenuItem::linkToRoute('Simuladores', 'fas fa-tool', 'home');
 
-        yield MenuItem::section("Información contingencia");
-        yield MenuItem::linkToCrud('Cotizaciones', 'fas fa-dollar', Quote::class);
+        yield MenuItem::section("Detalle contingencias");
+        yield MenuItem::linkToCrud('Simulaciones de Crédito', 'fas fa-dollar', Quote::class)->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToCrud('Ventas', 'fas fa-dollar', Sale::class);
         yield MenuItem::linkToCrud('Pagos', 'fas fa-money-bill', Payment::class);
+        yield MenuItem::linkToCrud('Ventas Sysretail', 'fas fa-dollar', Sale::class)->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Pagos Sysretail', 'fas fa-money-bill', Payment::class)->setPermission('ROLE_ADMIN');
 
-        yield MenuItem::section("Historial");
-        yield MenuItem::linkToCrud('Ventas históricas', 'fas fa-archive', Sale::class)->setController(ArchivedSaleCrudController::class)->setAction(Action::INDEX);
 
-        yield MenuItem::section("Clientes");
-        yield MenuItem::linkToCrud('Clientes', 'fas fa-user', Client::class);
+        yield MenuItem::section("Reportes")->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Clientes', 'fas fa-user', Client::class)->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Histórico Contigencia', 'fas fa-archive', Contingency::class)->setPermission('ROLE_ADMIN');
 
-        yield MenuItem::section("Sistema");
-        yield MenuItem::linkToCrud('Contingencias', 'bi bi-alarm', Contingency::class);
-        yield MenuItem::linkToCrud('Historial de sincronización', 'bi bi-sync', SyncEvent::class);
-        yield MenuItem::linkToCrud('Usuarios', 'fas fa-users', User::class);
-        yield MenuItem::linkToCrud('Locales', 'fas fa-building', Location::class);
-        yield MenuItem::linkToCrud('Dispositivos', 'fas fa-device', Device::class);
-        yield MenuItem::linkToRoute('Parámetros de sistema', 'fas fa-gears', 'admin_system_parameter_config');
-        yield MenuItem::linkToCrud('Manual de usuario', 'fas fa-book', SystemDocument::class);
+        yield MenuItem::section("Configuración")->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Sincronizaciones', 'fas fa-users', SyncEvent::class)->setAction(Action::INDEX)->setPermission(User::ROLE_SUPER_ADMIN);
+        yield MenuItem::linkToCrud('Usuarios', 'fas fa-users', User::class)->setAction(Action::INDEX)->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Locales', 'fas fa-building', Location::class)->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Equipos', 'fas fa-device', Device::class)->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToRoute('Parámetros de sistema', 'fas fa-gears', 'admin_system_parameter_config')->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Manual de usuario', 'fas fa-book', SystemDocument::class)->setPermission('ROLE_ADMIN');
     }
 
     public function configureAssets(): Assets

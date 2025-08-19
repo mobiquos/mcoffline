@@ -5,6 +5,7 @@ namespace App\Validator;
 use App\Entity\Client;
 use App\Entity\Contingency;
 use App\Entity\Payment as PaymentEntity;
+use App\Entity\SystemParameter;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Validator\Constraint;
 use Symfony\Component\Validator\ConstraintValidator;
@@ -21,6 +22,13 @@ class PaymentValidator extends ConstraintValidator
             return;
         }
 
+        $maxPaymentAllowed = $this->em->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_MAX_PAYMENT_ALLOWED]);
+        if ($maxPaymentAllowed && $value->getAmount() > (int)$maxPaymentAllowed->getValue()) {
+            $this->context->buildViolation($constraint->maxPaymentAmountMessage)
+                ->atPath('amount')
+                ->addViolation();
+        }
+
         if (!Client::validateRut($value->getRut())) {
             $this->context->buildViolation($constraint->message)
                 ->setParameter('{{ rut }}', $value->getRut())
@@ -33,6 +41,18 @@ class PaymentValidator extends ConstraintValidator
             $this->context->buildViolation($constraint->clientNotFoundMessage)
                 ->setParameter('{{ rut }}', $value->getRut())
                 ->atPath('rut')
+                ->addViolation();
+        }
+
+        if ($client->getOverdue() <= 0) {
+            $this->context->buildViolation($constraint->clientWithoutDebtMessage)
+                ->atPath('rut')
+                ->addViolation();
+        }
+
+        if ($value->getPaymentMethod() === PaymentEntity::PAYMENT_METHOD_CASH && $value->getAmount() % 10 !== 0) {
+            $this->context->buildViolation($constraint->amountNotDivisibleBy10Message)
+                ->atPath('amount')
                 ->addViolation();
         }
 

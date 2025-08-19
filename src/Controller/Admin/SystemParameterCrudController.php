@@ -42,8 +42,14 @@ class SystemParameterCrudController extends AbstractCrudController
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
 
-            // $em->getRepository(SystemParameter::class)->createQueryBuilder('e')->delete()->getQuery()->getSingleScalarResult();
-
+            foreach ($data as $param) {
+                $config = SystemParameter::PARAMS[$param->getCode()];
+                if (isset($config['role']) && !$this->isGranted($config['role'])) {
+                    $this->addFlash('danger', sprintf('No tienes permisos para modificar el parámetro "%s".', $config['name']));
+                } else {
+                    $em->persist($param);
+                }
+            }
 
             $em->flush();
         }

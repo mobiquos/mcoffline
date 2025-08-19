@@ -13,6 +13,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
@@ -39,7 +40,8 @@ class SaleCrudController extends AbstractCrudController
     {
         $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
 
-        $contingency = $this->em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
+        $contingency = $this->em->getRepository(Contingency::class)->findBy([], ['id' => 'DESC'], 1, 0);
+        $contingency = current($contingency);
 
         if ($contingency) {
             $qb
@@ -64,14 +66,13 @@ class SaleCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         return [
-            AssociationField::new('contingency', 'Contingencia')->setFieldFqcn(Contingency::class),
-            AssociationField::new('createdBy', 'Registrado por')->setFieldFqcn(User::class),
-            DateTimeField::new('createdAt', 'Fecha/Hora'),
-            IdField::new('quote.id', 'Cotización'),
+            DateTimeField::new('createdAt', 'Fecha')->setFormat('d-m-Y')->onlyOnIndex(),
+            TextField::new('contingency.location.code', 'Agencia')->onlyOnIndex(),
             TextField::new('rut', 'RUT'),
-            TextField::new('folio', 'TBK'),
-            IntegerField::new('quote.amount', 'Total'),
-            IntegerField::new('quote.installments', 'Plazo'),
+            TextField::new('folio', 'Número de Boleta'),
+            IntegerField::new('quote.amount', 'Monto Capital'),
+            IntegerField::new('quote.installments', 'Número Cuotas'),
+            DateField::new('quote.billingDate', 'Primer Vencimiento')->setFormat('d-m-y'),
         ];
     }
 
@@ -85,7 +86,7 @@ class SaleCrudController extends AbstractCrudController
         return $actions
             ->add(Crud::PAGE_INDEX, $exportAction)
             ->remove(Crud::PAGE_INDEX, Action::DELETE)
-            ->remove(Crud::PAGE_INDEX, Action::EDIT)
+            // ->remove(Crud::PAGE_INDEX, Action::EDIT)
             ->remove(Crud::PAGE_INDEX, Action::NEW)
         ;
     }

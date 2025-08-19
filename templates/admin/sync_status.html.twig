@@ -1,0 +1,33 @@
+<div class="table-responsive">
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Local</th>
+                <th>Última Sincronización</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for location, syncEvents in syncData %}
+            <tr>
+                <td>{{ location }}</td>
+                {% if syncEvents is not empty %}
+                {% set lastSync = syncEvents|first %}
+                <td>{{ lastSync.createdAt|date('Y-m-d H:i:s') }}</td>
+                <td>
+                    {% if lastSync.status == 'success' %}
+                    <span class="badge bg-success text-white">Sincronizado</span>
+                    {% else %}
+                    <span class="badge bg-danger text-white">Ultima sincronización fallida</span>
+                    {% endif %}
+                </td>
+                {% else %}
+                <td colspan="2" class="text-center">
+                    <span class="badge bg-warning">No hay eventos de sincronización para hoy.</span>
+                </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

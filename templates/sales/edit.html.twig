@@ -1,0 +1,42 @@
+{% extends 'tool_base.html.twig' %}
+
+{% block container %}
+<div class="tool-container">
+    <div class="tool-header">
+        <div class="row">
+            <div class="col col-12">
+                <img src="{{ asset('images/logo-text.png') }}" alt="Logo Multicentro">
+            </div>
+        </div>
+    </div>
+    <main>
+        <h3>Editar Venta #{{ sale.id }}</h3>
+        <hr>
+        {% include 'quotes/info_client.html.twig' with {'client': client} %}
+        <hr>
+        {% include 'sales/quote_detail.html.twig' with {'quote': quote} %}
+        <hr>
+        {{ form_start(form) }}
+        <div class="row">
+            <div class="col-md-4">
+                {{ form_row(form.amount) }}
+            </div>
+            <div class="col-md-4">
+                {{ form_row(form.installments) }}
+            </div>
+            <div class="col-md-4">
+                {{ form_row(form.downPayment) }}
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                {{ form_row(form.folio) }}
+            </div>
+        </div>
+        {{ form_widget(form.quote) }}
+        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        <a href="{{ path('app_sales') }}" class="btn btn-secondary">Cancelar</a>
+        {{ form_end(form) }}
+    </main>
+</div>
+{% endblock %}

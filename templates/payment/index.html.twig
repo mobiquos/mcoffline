@@ -1,7 +1,7 @@
 {% extends 'tool_base.html.twig' %}
 {% form_theme form 'bootstrap_5_layout.html.twig' %}
 
-{% block page_title %}Registrar Pago{% endblock %}
+{% block page_title %}Caja: Abono/Pago Cuenta{% endblock %}
 
 {% block form_content %}
     {% for label, messages in app.flashes %}
@@ -76,5 +76,28 @@
                 });
         }, 500));
     }
+
+    const paymentMethodInputs = document.querySelectorAll('input[name="payment_form[paymentMethod]"]');
+    const voucherIdInput = document.querySelector('#payment_form_voucherId');
+
+    voucherIdInput.addEventListener('input', function (e) {
+        this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    const toggleVoucherId = () => {
+        const selectedPaymentMethod = document.querySelector('input[name="payment_form[paymentMethod]"]:checked');
+        if (selectedPaymentMethod && selectedPaymentMethod.value === '{{ constant('App\\Entity\\Payment::PAYMENT_METHOD_CASH') }}') {
+            voucherIdInput.disabled = true;
+            voucherIdInput.value = '';
+        } else {
+            voucherIdInput.disabled = false;
+        }
+    };
+
+    paymentMethodInputs.forEach(input => {
+        input.addEventListener('change', toggleVoucherId);
+    });
+
+    toggleVoucherId();
 </script>
 {% endblock %}

@@ -21,7 +21,12 @@ class PaymentController extends AbstractController
         $form = $this->createForm(PaymentFormType::class, $payment);
         $form->handleRequest($request);
 
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
         if ($form->isSubmitted() && $form->isValid()) {
+            if ($payment->getPaymentMethod() === Payment::PAYMENT_METHOD_CASH) {
+                $payment->setVoucherId(null);
+            }
+
             $payment->setCreatedBy($this->getUser());
 
             $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
@@ -34,13 +39,19 @@ class PaymentController extends AbstractController
             $em->persist($client);
             $em->flush();
 
-            $this->addFlash('success', 'Pago registrado exitosamente.');
+            // Invalidate the session
+            $tokenStorage->setToken(null);
+            $request->getSession()->invalidate();
 
-            return $this->redirectToRoute('app_payment');
+            return $this->render('payment/success.html.twig', [
+                'entity' => $payment,
+                'contingency' => $contingency,
+            ]);
         }
 
         return $this->render('payment/index.html.twig', [
             'form' => $form->createView(),
+            'contingency' => $contingency,
         ]);
     }
 

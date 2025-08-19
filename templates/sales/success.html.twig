@@ -1,16 +1,29 @@
 {% extends 'tool_base.html.twig' %}
 
-{% block page_title %}Venta Registrada Exitosamente{% endblock %}
+{% block container %}
 
-{% block form_content %}
-    <div class="text-center">
-        <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
-        <h1 class="h3 mt-3">¡Venta Registrada!</h1>
-        <p class="lead">La venta ha sido registrada exitosamente en el sistema.</p>
-        <hr>
-        <p>Puede cerrar esta ventana o volver a la página de inicio.</p>
-        <a href="{{ path('app_login') }}" class="btn btn-primary mt-3">
-            <i class="bi bi-house-door"></i> Volver al Inicio
-        </a>
+<div class="tool-container">
+    <div class="tool-header">
+        <div class="row">
+            <div class="col col-12">
+                <img src="{{ asset('images/logo-text.png') }}" alt="Logo Multicentro">
+            </div>
+        </div>
     </div>
+    <main>
+        <div class="text-center">
+            <h3>Venta Registrada Exitosamente</h3>
+            <i class="bi bi-check-circle-fill text-success" style="font-size: 4rem;"></i>
+            <hr>
+            <p>N DTE: {{ entity.folio }}.</p>
+            <p>Nota: Recuerde realizar cambio de medio de pago.</p>
+            <a href="#" class="btn btn-primary mt-3">
+                Imprimir
+            </a>
+            <a href="{{ path('app_login') }}" class="btn btn-warning text-white mt-3">
+                Salir (Solo para pruebas)
+            </a>
+        </div>
+    </main>
+</div>
 {% endblock %}

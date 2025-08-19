@@ -19,6 +19,7 @@ class SystemParameterForm extends AbstractType
             $config = SystemParameter::PARAMS[$data->getCode()];
             $form->add('value', $config['formType'], [
                 'label' => $config['name'],
+                'help' => $config['description']
             ]);
         })
         ;

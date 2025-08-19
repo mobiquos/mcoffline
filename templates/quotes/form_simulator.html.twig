@@ -6,13 +6,6 @@
         {{ form_row(form.rut) }}
         <div id="alerts-rut"></div>
         {{ form_rest(form) }}
-
-        <div class="d-grid gap-2">
-            <button id="btn-submit-simulation" type="submit" name="submit" value="simulate"
-                class="btn btn-primary">Simular</button>
-            <a href="{{ path('app_quotes') }}" class="btn btn-secondary">Limpiar</a>
-        </div>
-
     </div>
     <div class="col-md-6">
         <h5 class="card-title">Información del Cliente</h5>
@@ -24,29 +17,55 @@
             {% endif %}
         </div>
     </div>
-    <div class="col-md12">
+ </div>
+<div class="row px-3 g-2">
+<div class="col-6">
+    <button id="btn-submit-simulation" type="submit" name="submit" value="simulate"
+        class="btn btn-primary w-100">Simular</button>
+</div>
+<div class="col-3">
+    <a href="{{ path('app_quotes') }}" class="btn btn-secondary w-100">Limpiar</a>
+</div>
+<div class="col-3">
+    <a href="{{ path('home') }}" class="btn btn-warning text-white w-100">Salir</a>
+</div>
+</div>
+<div class="row mt-3">
+    <div class="col-md-12">
         {% if installment_amount is defined %}
-        <div class="mt-3">
-            <div class="mb-3">
-                <label class="form-label">Intereses</label>
+        <div class="row">
+            <div class="col-6">
+                <label class="form-label">Tasa de Interés</label>
                 <input type="text" class="form-control" value="{{ interest }}%" disabled>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Valor cuota</label>
+            <div class="col-6">
+                <label class="form-label">Próximo Vencimiento</label>
+                <input type="text" class="form-control" value="{{ due_date|date(" d/m/Y") }}" disabled>
+            </div>
+        </div>
+        <div class="row mt-3">
+            <div class="col-6">
+                <label class="form-label">Valor Cuota</label>
                 <input type="text" class="form-control" value="${{ installment_amount|number_format(0, ',', '.') }}"
                     disabled>
             </div>
-            <div class="mb-3">
-                <label class="form-label">Proximo vencimiento</label>
-                <input type="text" class="form-control" value="{{ due_date|date(" d/m/Y") }}" disabled>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Total credito</label>
+            <div class="col-6">
+                <label class="form-label">Total Costo Credito</label>
                 <input type="text" class="form-control" value="${{ total|number_format(0, ',', '.') }}" disabled>
             </div>
-            <button id="btn-save-simulation" type="submit" name="simulation_form[save]" value="true"
-                class="btn btn-success w-100">Guardar cotización</button>
         </div>
+        {% if installment_amount < min_installment_amount %}
+        <div class="row mt-3">
+            <div class="col-12">
+                <p class="alert alert-danger">El monto mínimo para el valor de una cuota es de ${{ min_installment_amount|number_format(0, ',', '.') }}</p>
+            </div>
+        </div>
+        <button id="btn-save-simulation" type="submit" name="simulation_form[save]" value="true" disabled
+            class="btn btn-success w-100">Guardar Simulación</button>
+        {% else %}
+        <button id="btn-save-simulation" type="submit" name="simulation_form[save]" value="true"
+            class="btn btn-success w-100 mt-3">Guardar Simulación</button>
+        {% endif %}
         {% endif %}
     </div>
 </div>
@@ -66,29 +85,25 @@
 
     const rutInput = document.querySelector('#simulation_form_rut');
     const alertsRut = document.querySelector('#alerts-rut');
-    const panelClient = document.querySelector('#panel-client'); elClient = document.querySelector('#panel-client');
+    const panelClient = document.querySelector('#panel-client');
 
     if (rutInput) {
         rutInput.addEventListener('keyup', debounce((evt) => {
             panelClient.innerHTML = "";
             alertsRut.innerHTML = "";
             let rut = rutInput.value;
-            fetch(`{{ path('app_quotes_rut') }}?rut=${rut}`)
+
+            fetch(`{{ path('app_quotes_client') }}?rut=${rut}`)
                 .then(response => {
                     const isSuccess = response.status === 200;
                     document.querySelectorAll('form[name="simulation_form"] input:not(#simulation_form_rut), form[name="simulation_form"] select')
                         .forEach(e => e.disabled = !isSuccess);
-                    return response.text().then(content => {
-                        alertsRut.innerHTML = content;
-                        return isSuccess;
-                    });
+
+                    return response.text()
                 })
-                .then(isSuccess => {
-                    if (!isSuccess) return;
-                    fetch(`{{ path('app_quotes_client') }}?rut=${rut}`)
-                        .then(response => response.text())
-                        .then(content => panelClient.innerHTML = content);
-                });
-        }, 500));
+                .then(content => {
+                    panelClient.innerHTML = content;
+            });
+        }, 1000));
     }
 </script>

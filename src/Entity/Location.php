@@ -38,6 +38,12 @@ class Location
     #[ORM\OneToMany(targetEntity: Device::class, mappedBy: 'location')]
     private Collection $devices;
 
+    /**
+     * @var Collection<int, SyncEvent>
+     */
+    #[ORM\OneToMany(targetEntity: SyncEvent::class, mappedBy: 'location')]
+    private Collection $syncEvents;
+
     #[ORM\Column(nullable: true)]
     private ?bool $enabled = null;
 
@@ -45,6 +51,7 @@ class Location
     {
         $this->contingencies = new ArrayCollection();
         $this->devices = new ArrayCollection();
+        $this->syncEvents = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -148,6 +155,36 @@ class Location
     public function setEnabled(?bool $enabled): static
     {
         $this->enabled = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, SyncEvent>
+     */
+    public function getSyncEvents(): Collection
+    {
+        return $this->syncEvents;
+    }
+
+    public function addSyncEvent(SyncEvent $syncEvent): static
+    {
+        if (!$this->syncEvents->contains($syncEvent)) {
+            $this->syncEvents->add($syncEvent);
+            $syncEvent->setLocation($this);
+        }
+
+        return $this;
+    }
+
+    public function removeSyncEvent(SyncEvent $syncEvent): static
+    {
+        if ($this->syncEvents->removeElement($syncEvent)) {
+            // set the owning side to null (unless already changed)
+            if ($syncEvent->getLocation() === $this) {
+                $syncEvent->setLocation(null);
+            }
+        }
 
         return $this;
     }

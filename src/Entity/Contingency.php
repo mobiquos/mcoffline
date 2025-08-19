@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\ContingencyRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ContingencyRepository::class)]
@@ -35,6 +37,18 @@ class Contingency
 
     #[ORM\Column(length: 200, nullable: true)]
     private ?string $comment = null;
+
+    #[ORM\OneToMany(targetEntity: Sale::class, mappedBy: 'contingency')]
+    private Collection $sales;
+
+    #[ORM\OneToMany(targetEntity: Payment::class, mappedBy: 'contingency')]
+    private Collection $payments;
+
+    public function __construct()
+    {
+        $this->sales = new ArrayCollection();
+        $this->payments = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -134,5 +148,33 @@ class Contingency
     public function __toString(): string
     {
         return '#' . (string) $this->id;
+    }
+
+    public function getSalesQuantity(): int
+    {
+        return $this->sales->count();
+    }
+
+    public function getSalesTotalAmount(): int
+    {
+        $total = 0;
+        foreach ($this->sales as $sale) {
+            $total += $sale->getQuote()->getTotalAmount();
+        }
+        return $total;
+    }
+
+    public function getPaymentsQuantity(): int
+    {
+        return $this->payments->count();
+    }
+
+    public function getPaymentsTotalAmount(): int
+    {
+        $total = 0;
+        foreach ($this->payments as $payment) {
+            $total += $payment->getAmount();
+        }
+        return $total;
     }
 }

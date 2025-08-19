@@ -5,9 +5,12 @@ namespace App\Entity;
 use App\Repository\SaleRepository;
 use App\Validator\Sale as SaleConstraint;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
 #[ORM\Entity(repositoryClass: SaleRepository::class)]
 #[ORM\Table(name: 'sales')]
+#[UniqueEntity(['quote', 'contingency'], message: 'La cotización ingresada no está vigente. Venta ya registrada.')]
+
 class Sale
 {
     #[ORM\Id]
@@ -31,6 +34,12 @@ class Sale
 
     #[ORM\Column(length: 9)]
     private ?string $rut = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?User $createdBy = null;
+
+    public ?string $clientFullName = null;
 
     public function __construct()
     {
@@ -98,6 +107,18 @@ class Sale
     public function setRut(string $rut): static
     {
         $this->rut = $rut;
+
+        return $this;
+    }
+
+    public function getCreatedBy(): ?User
+    {
+        return $this->createdBy;
+    }
+
+    public function setCreatedBy(?User $createdBy): static
+    {
+        $this->createdBy = $createdBy;
 
         return $this;
     }

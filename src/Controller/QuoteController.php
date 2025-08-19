@@ -25,7 +25,8 @@ class QuoteController extends AbstractController
         $form = $this->createForm(SimulationForm::class, new Quote());
         $form->handleRequest($request);
 
-        $templateParams = ['form' => $form->createView()];
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
+        $templateParams = ['form' => $form->createView(), 'contingency' => $contingency];
 
         if ($form->isSubmitted() && !$form->isValid()) {
             $clientRepository = $em->getRepository(Client::class);
@@ -45,6 +46,9 @@ class QuoteController extends AbstractController
             $systemParameterRepository = $em->getRepository(SystemParameter::class);
 
             $calculation = $quoteService->calculateInstallment($data);
+
+            $minInstallmentAmount = $systemParameterRepository->findByCode(SystemParameter::PARAM_MIN_INSTALLMENT_AMOUNT);
+
             $dueDate = $client->getNextBillingAt();
 
             if ($form->get('save')->getData() != "true") {
@@ -54,6 +58,7 @@ class QuoteController extends AbstractController
                 $templateParams['interest'] = $calculation['interest'];
                 $templateParams['saved'] = false;
                 $templateParams['client'] = $client;
+                $templateParams['min_installment_amount'] = $minInstallmentAmount->getValue();
 
                 return $this->render('quotes/index.html.twig', $templateParams);
             }
@@ -64,8 +69,8 @@ class QuoteController extends AbstractController
             $data->setInterest($calculation['interest']);
             $data->setInstallmentAmount($calculation['installment_amount']);
             $data->setTotalAmount($calculation['total']);
+            $data->setBillingDate($dueDate);
 
-            $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
             $data->setContingency($contingency);
 
             $em->persist($data);
@@ -75,7 +80,11 @@ class QuoteController extends AbstractController
             $tokenStorage->setToken(null);
             $request->getSession()->invalidate();
 
-            return $this->render('quotes/success.html.twig', ['entity' => $data]);
+            return $this->render('quotes/success.html.twig', [
+                'entity' => $data,
+                'client' => $client,
+                'contingency' => $contingency,
+            ]);
         }
 
         return $this->render('quotes/index.html.twig', $templateParams);
@@ -98,10 +107,17 @@ class QuoteController extends AbstractController
     public function getInfoClient(Request $request, EntityManagerInterface $em): Response
     {
         $rut = $request->query->get('rut');
-        $client = $em->getRepository(Client::class)->findOneBy(['rut' => str_replace(['.', '-'], '', $rut)]);
+        if (!Client::validateRut($rut)) {
+            return new Response('El RUT no es valido', 404);
+        }
 
-        if (!Client::validateRut($rut) || !$client) {
-            return new Response('', 404);
+        $client = $em->getRepository(Client::class)->findOneBy(['rut' => str_replace(['.', '-'], '', $rut)]);
+        if (!$client) {
+            return new Response('Cliente no encontrado', 404);
+        }
+
+        if (strpos(strtoupper($client->getBlockComment()), "BLOQUEO") !== false) {
+            return new Response('Bloqueo(s) impide simulaciones/compras.', 403);
         }
 
         return $this->render('quotes/info_client.html.twig', [

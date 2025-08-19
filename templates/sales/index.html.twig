@@ -1,8 +1,17 @@
 {% extends 'tool_base.html.twig' %}
 
-{% block page_title %}Caja{% endblock %}
+{% block page_title %}Caja: Autorizador de Crédito{% endblock %}
 
 {% block form_content %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ path('app_sales_quotes') }}" class="btn btn-secondary">
+            <i class="bi bi-list-ul"></i> Ver Cotizaciones del Día
+        </a>
+        <a href="{{ path('app_logout') }}" class="btn btn-warning text-white ms-3">
+            <i class=""></i> Salir
+        </a>
+    </div>
+
     {% for label, messages in app.flashes %}
         {% for message in messages %}
             <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
@@ -19,7 +28,7 @@
                 <div class="input-group">
                     {{ form_widget(form.quote_id) }}
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search"></i> Buscar
+                        <i class="bi bi-search"></i> Buscar Simulación
                     </button>
                 </div>
             {{ form_end(form) }}
@@ -27,25 +36,6 @@
     </div>
 
     {% if quote is defined and quote is not null %}
-        {% if client is defined and client is not null %}
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Información del Cliente</h5>
-                </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>RUT:</strong> {{ client.rut }}</p>
-                            <p><strong>Nombre:</strong> {{ client.fullName }}</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Cupo disponible:</strong> ${{ client.creditAvailable|number_format(0, ',', '.') }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-
         <div class="card">
             <div class="card-header">
                 <h5 class="mb-0">Detalles de la Cotización #{{ quote.id }}</h5>
@@ -53,28 +43,58 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-6">
-                        <p><strong>Monto:</strong> ${{ quote.amount|number_format(0, ',', '.') }}</p>
-                        <p><strong>Interés:</strong> {{ quote.interest }}%</p>
+                        <p><strong>RUT Cliente:</strong> {{ client.rut }}</p>
+                        <p><strong>Nombre Cliente:</strong> {{ client.fullName|title }}</p>
+                        <p><strong>Vendedor:</strong> {{ quote.createdBy.fullName|title }}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Monto de la cuota:</strong> ${{ quote.installmentAmount|number_format(0, ',', '.') }}</p>
-                        <p><strong>Monto total:</strong> ${{ quote.totalAmount|number_format(0, ',', '.') }}</p>
-                        <p><strong>Número de cuotas:</strong> {{ quote.installments }}</p>
-                        <p><strong>Fecha de la cotización:</strong> {{ quote.quoteDate|date('d-m-Y') }}</p>
+                        <p><strong>Monto a Financiar:</strong> ${{ quote.amount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Tasa de Interés:</strong> {{ quote.interest }}%</p>
+                        <p><strong>Número de Cuotas:</strong> {{ quote.installments }}</p>
+                        <p><strong>Valor Cuota:</strong> ${{ quote.installmentAmount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Costo Total del Crédito:</strong> ${{ quote.totalAmount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Próximo Vencimiento:</strong> {{ client.nextBillingAt|date('d-m-Y') }}</p>
                     </div>
                 </div>
             </div>
-            <div class="card-footer text-end">
+            <div class="card-footer">
                 {{ form_start(sale_form, { action: path('app_sales_accept') }) }}
+                    {% for error in sale_form.folio.vars.errors %}
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            {{ error.message }}
+                        </div>
+                    {% endfor %}
                     {{ form_widget(sale_form.quote) }}
-                    <div class="d-inline-flex gap-2">
-                        {{ form_widget(sale_form.folio) }}
+                    <div class="d-flex gap-2 justify-content-between align-items-center">
+                        <label>Para continuar ingrese número de documento</label>
+                        {{ form_widget(sale_form.folio, { attr: {class: 'form-control', style: "width: 200px", pattern: "[1-9][0-9]{6,7}", title: "El folio debe ser un número entre 1000000 y 99999999."} }) }}
                         <button type="submit" class="btn btn-success">
-                            <i class="bi bi-check-circle"></i> Aceptar Venta
+                            <i class="bi bi-check-circle"></i> Aceptar Simulación
                         </button>
                     </div>
                 {{ form_end(sale_form) }}
             </div>
         </div>
     {% endif %}
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    const debounce = (callback, wait) => {
+        let timeoutId = null;
+        return (...args) => {
+            window.clearTimeout(timeoutId);
+            timeoutId = window.setTimeout(() => {
+                callback.apply(null, args);
+            }, wait);
+        };
+    }
+
+    const folioInput = document.querySelector('#sale_form_folio');
+    if (folioInput) {
+        folioInput.addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    }
+</script>
 {% endblock %}

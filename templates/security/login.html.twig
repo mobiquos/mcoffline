@@ -44,5 +44,11 @@
       Ingresar
     </button>
   </div>
+
+  {% if last_sync %}
+  <div class="mt-3 text-center">
+    <small>Última sincronización exitosa: {{ last_sync.createdAt|date('d-m-Y H:i:s') }}</small>
+  </div>
+  {% endif %}
 </form>
 {% endblock %}

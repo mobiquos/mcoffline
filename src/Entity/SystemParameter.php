@@ -16,6 +16,7 @@ class SystemParameter
 {
     const PARAM_LOCATION_CODE = "location_code";
     const PARAM_SERVER_ADDRESS = "server_address";
+    const PARAM_MIN_INSTALLMENT_AMOUNT = "min_installment_amount";
     const PARAM_MIN_INSTALLMENTS = "min_installments";
     const PARAM_MAX_INSTALLMENTS = "max_installments";
     const PARAM_INTERESTS = "interests";
@@ -25,6 +26,7 @@ class SystemParameter
     const PARAM_PERCENT_REQUIRED_BALANCE = "percent_required_balance";
     const PARAM_MAX_SYNC_AGE_IN_DAYS = "max_sync_age_in_days";
     const PARAM_SESSION_LIFETIME = "session_lifetime";
+    const PARAM_MAX_PAYMENT_ALLOWED = "max_payment_allowed";
 
     const PARAMS = [
         self::PARAM_LOCATION_CODE => [
@@ -32,22 +34,30 @@ class SystemParameter
             'description' => "Código único usado para identificar el local. Revisar tabla de locales.",
             'formType' => TextType::class,
             'defaultValue' => "000X",
+            'role' => 'ROLE_SUPER_ADMIN',
         ],
         self::PARAM_SERVER_ADDRESS => [
             'name' => "Dirección IP del servidor",
             'description' => "Dirección IP.",
             'formType' => TextType::class,
             'defaultValue' => "localhost",
+            'role' => 'ROLE_SUPER_ADMIN',
+        ],
+        self::PARAM_MIN_INSTALLMENT_AMOUNT => [
+            'name' => "Monto mínimo de cuota",
+            'description' => "Corresponde al monto mínimo de una cuota",
+            'formType' => IntegerType::class,
+            'defaultValue' => 2000,
         ],
         self::PARAM_MIN_INSTALLMENTS => [
-            'name' => "Plazo minimo",
-            'description' => "Plazo minimo permitido durante simulación.",
+            'name' => "Número cuotas minimo",
+            'description' => "Número minimo de cuotas permitido para una simulación.",
             'formType' => IntegerType::class,
             'defaultValue' => 1,
         ],
         self::PARAM_MAX_INSTALLMENTS => [
-            'name' => "Plazo máximo",
-            'description' => "Plazo màximo permitido durante simulación.",
+            'name' => "Número cuotas máximo",
+            'description' => "Número máximo de cuotas permitido para una simulación.",
             'formType' => IntegerType::class,
             'defaultValue' => 24,
         ],
@@ -57,9 +67,15 @@ class SystemParameter
             'formType' => IntegerType::class,
             'defaultValue' => 1000000,
         ],
+        self::PARAM_MAX_PAYMENT_ALLOWED => [
+            'name' => "Monto máximo por pago",
+            'description' => "Corresponde al monto máximo permitido por pago.",
+            'formType' => IntegerType::class,
+            'defaultValue' => 1000000,
+        ],
         self::PARAM_DOWN_PAYMENT_ALLOWED => [
             'name' => "Permitir pie",
-            'description' => "Corresponde al monto máximo permitido para una compra.",
+            'description' => ".",
             'formType' => BooleanStringType::class,
             'defaultValue' => "false",
         ],
@@ -70,13 +86,13 @@ class SystemParameter
             'defaultValue' => 3,
         ],
         self::PARAM_PERCENT_REQUIRED_BALANCE => [
-            'name' => "Porcentaje de saldo requerido",
+            'name' => "% del cupo disponible habilitado",
             'description' => "Corresponde al porcentaje de cupo que el cliente debe tener disponible para realizar una compra.",
             'formType' => IntegerType::class,
             'defaultValue' => 30,
         ],
         self::PARAM_MAX_SYNC_AGE_IN_DAYS => [
-            'name' => "Antiguedad máxima de la sincronización",
+            'name' => "Antigüedad máxima de la sincronización (días)",
             'description' => "Corresponde al número de días desde la ultima sincronización para que el sistema pueda entrar en modo de contingencia.",
             'formType' => IntegerType::class,
             'defaultValue' => 7,
@@ -88,7 +104,7 @@ class SystemParameter
             'defaultValue' => "3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7",
         ],
         self::PARAM_SESSION_LIFETIME => [
-            'name' => "Duración de la sesión",
+            'name' => "Duración de la sesión (minutos)",
             'description' => "Corresponde a la duración de la sesión en minutos.",
             'formType' => IntegerType::class,
             'defaultValue' => 60,

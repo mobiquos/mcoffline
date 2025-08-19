@@ -26,6 +26,9 @@ class SyncEvent
     #[ORM\Column]
     private ?string $status = self::STATUS_INPROGRESS;
 
+    #[ORM\ManyToOne(inversedBy: 'syncEvents')]
+    private ?Location $location = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime;
@@ -67,6 +70,18 @@ class SyncEvent
     public function setStatus(string $status): static
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    public function getLocation(): ?Location
+    {
+        return $this->location;
+    }
+
+    public function setLocation(?Location $location): static
+    {
+        $this->location = $location;
 
         return $this;
     }

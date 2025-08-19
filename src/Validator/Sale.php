@@ -8,8 +8,9 @@ use Symfony\Component\Validator\Constraint;
 class Sale extends Constraint
 {
     public $message = 'El RUT "{{ rut }}" no es valido.';
-    public $clientNotFoundMessage = 'El cliente con RUT "{{ rut }}" no existe.';
-    public $folioExistsMessage = 'El folio "{{ folio }}" ya existe durante la contingencia actual.';
+    public $clientNotFoundMessage = 'El cliente con RUT "{{ rut }}" no está registrado.';
+    public $folioExistsMessage = 'El número de boleta "{{ folio }}" ya está registrada durante la contingencia.';
+    public $quoteNotValidMessage = 'La cotización #{{ quote }} no está vigente.';
 
     public function __construct(
         public string $mode = 'strict',

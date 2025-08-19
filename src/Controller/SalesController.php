@@ -3,10 +3,12 @@
 namespace App\Controller;
 
 use App\Entity\Client;
+use App\Entity\Contingency;
 use App\Entity\Quote;
 use App\Entity\Sale;
 use App\Form\QuoteSearchFormType;
 use App\Form\SaleFormType;
+use App\Repository\QuoteRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -25,6 +27,7 @@ class SalesController extends AbstractController
         $quote = null;
         $client = null;
         $sale = new Sale();
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
@@ -35,11 +38,11 @@ class SalesController extends AbstractController
             if (!$quote) {
                 $this->addFlash('danger', 'La cotización no existe.');
             } else {
+                $client = $em->getRepository(Client::class)->findOneBy(['rut' => $quote->getRut()]);
                 if ($quote->getSale()) {
-                    $this->addFlash('danger', 'La cotización ya fue aceptada.');
+                    $this->addFlash('danger', 'Cotización no vigente.');
                     $quote = null;
                 }
-                $client = $em->getRepository(Client::class)->findOneBy(['rut' => $quote->getRut()]);
             }
         }
 
@@ -53,6 +56,7 @@ class SalesController extends AbstractController
             'form' => $form->createView(),
             'quote' => $quote,
             'client' => $client,
+            'contingency' => $contingency,
             'sale_form' => $saleForm->createView(),
         ]);
     }
@@ -60,7 +64,11 @@ class SalesController extends AbstractController
     #[Route(name: 'app_sales_accept', path: '/sales/accept', methods: ['POST'])]
     public function accept(Request $request, EntityManagerInterface $em, TokenStorageInterface $tokenStorage): Response
     {
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
         $sale = new Sale();
+        $sale->setContingency($contingency);
+        $sale->setCreatedBy($this->getUser());
+
         $form = $this->createForm(SaleFormType::class, $sale);
         $form->handleRequest($request);
 
@@ -68,7 +76,6 @@ class SalesController extends AbstractController
         $sale->setRut($quote->getRut());
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $sale->setContingency($quote->getContingency());
 
             $client = $em->getRepository(Client::class)->findOneBy(['rut' => $sale->getRut()]);
             $client->setCreditAvailable($client->getCreditAvailable() - $sale->getQuote()->getAmount());
@@ -81,15 +88,83 @@ class SalesController extends AbstractController
             $tokenStorage->setToken(null);
             $request->getSession()->invalidate();
 
-            return $this->render('sales/success.html.twig');
+            return $this->render('sales/success.html.twig', [
+                'contingency' => $contingency
+            ]);
         }
 
+        $client = $em->getRepository(Client::class)->findOneBy(['rut' => $sale->getRut()]);
         $searchForm = $this->createForm(QuoteSearchFormType::class, ['quote_id' => $quote->getId()]);
 
         return $this->render('sales/index.html.twig', [
             'form' => $searchForm->createView(),
             'quote' => $quote,
+            'client' => $client,
             'sale_form' => $form->createView(),
+            'contingency' => $contingency
+        ]);
+    }
+
+    #[Route(name: 'app_sales_quotes', path: '/secure/sales/quotes')]
+    public function todayQuotes(EntityManagerInterface $em): Response
+    {
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
+        $quotes = $em->getRepository(Quote::class)->findWithClients($contingency);
+
+        return $this->render('sales/today_quotes.html.twig', [
+            'quotes' => $quotes,
+            'contingency' => $contingency,
+        ]);
+    }
+
+    #[Route('/secure/sales/quote/{id}', name: 'app_sales_quote_detail')]
+    public function quoteDetail(Quote $quote, EntityManagerInterface $em): Response
+    {
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
+        $client = $em->getRepository(Client::class)->findOneBy(['rut' => $quote->getRut()]);
+
+        return $this->render('sales/quote_detail.html.twig', [
+            'quote' => $quote,
+            'contingency' => $contingency,
+            'client' => $client,
+        ]);
+    }
+
+    #[Route('/secure/sales/{id}/edit', name: 'app_sales_edit', methods: ['GET', 'POST'])]
+    public function edit(Sale $sale, Request $request, EntityManagerInterface $em, QuoteService $quoteService): Response
+    {
+        $form = $this->createForm(SaleFormType::class, $sale);
+        $form->handleRequest($request);
+
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
+        $client = $em->getRepository(Client::class)->findOneBy(['rut' => $sale->getRut()]);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            /** @var Sale $sale */
+            $sale = $form->getData();
+            $quote = $sale->getQuote();
+
+            $calculation = $quoteService->calculateInstallment($quote);
+
+            $quote->setInterest($calculation['interest']);
+            $quote->setInstallmentAmount($calculation['installment_amount']);
+            $quote->setTotalAmount($calculation['total']);
+
+            $em->persist($quote);
+            $em->persist($sale);
+            $em->flush();
+
+            $this->addFlash('success', 'Venta actualizada exitosamente.');
+
+            return $this->redirectToRoute('app_sales_edit', ['id' => $sale->getId()]);
+        }
+
+        return $this->render('sales/edit.html.twig', [
+            'form' => $form->createView(),
+            'sale' => $sale,
+            'quote' => $sale->getQuote(),
+            'client' => $client,
+            'contingency' => $contingency,
         ]);
     }
 }

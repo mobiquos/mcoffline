@@ -13,17 +13,29 @@ security:
     dev:
       pattern: ^/(_(profiler|wdt)|css|images|js)/
       security: false
-    main:
+
+
+    contingency:
       lazy: true
       provider: app_user_provider
+      form_login:
+        login_path: app_contingency_login
+        check_path: app_contingency_login
       custom_authenticators:
         - App\Security\ContingencyLoginAuthenticator
 
       logout:
-        path: app_logout
-        # where to redirect after logout
-        # target: app_any_route
+        path: app_contingency_logout
 
+    admin:
+      lazy: true
+      provider: app_user_provider
+      form_login:
+        login_path: app_login
+        check_path: app_login
+
+      logout:
+        path: app_logout
       # activate different ways to authenticate
       # https://symfony.com/doc/current/security.html#the-firewall
 
@@ -35,6 +47,12 @@ security:
   access_control:
     - { path: ^/admin, roles: ROLE_USER }
     - { path: ^/secure, roles: ROLE_USER }
+
+  role_hierarchy:
+    ROLE_SUPER_ADMIN: ROLE_ADMIN
+    ROLE_ADMIN: [ROLE_LOCATION_ADMIN, ROLE_USER]
+    ROLE_CASHIER: ROLE_USER
+    ROLE_SELLER: ROLE_USER
 
 when@test:
   security:

@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Repository\SyncEventRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -9,8 +10,8 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 class SecurityController extends AbstractController
 {
-    #[Route(path: '/login', name: 'app_login')]
-    public function login(AuthenticationUtils $authenticationUtils): Response
+    #[Route(path: '/test/login', name: 'app_login')]
+    public function login(AuthenticationUtils $authenticationUtils, SyncEventRepository $syncEventRepository): Response
     {
         // get the login error if there is one
         $error = $authenticationUtils->getLastAuthenticationError();
@@ -21,6 +22,7 @@ class SecurityController extends AbstractController
         return $this->render('security/login.html.twig', [
             'last_username' => $lastUsername,
             'error' => $error,
+            'last_sync' => $syncEventRepository->findLastSuccessful(),
         ]);
     }
 

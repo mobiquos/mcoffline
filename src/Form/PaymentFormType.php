@@ -38,6 +38,10 @@ class PaymentFormType extends AbstractType
             ->add('voucherId', TextType::class, [
                 'label' => 'ID de voucher',
                 'required' => false,
+                'attr' => [
+                    'pattern' => '[0-9]*',
+                    'inputmode' => 'numeric',
+                ],
             ])
         ;
     }

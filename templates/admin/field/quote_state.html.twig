@@ -1,0 +1,8 @@
+{% set quote = entity.instance %}
+{% if quote.sale is not null %}
+    <span class="badge badge-success">Autorizada</span>
+{% elseif quote.quoteDate|date('Y-m-d') < "now"|date('Y-m-d') %}
+    <span class="badge badge-danger">Rechazada</span>
+{% else %}
+    <span class="badge badge-warning">Pendiente</span>
+{% endif %}

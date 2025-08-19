@@ -1,0 +1,34 @@
+{% extends 'tool_base.html.twig' %}
+
+{% block page_title %}Caja: Autorizador de Crédito{% endblock %}
+
+{% block form_content %}
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ path('app_sales_quotes') }}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Volver al Listado
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Detalle de Simulación #{{ quote.id }}</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>RUT Cliente:</strong> {{ client.rut }}</p>
+                        <p><strong>Nombre Cliente:</strong> {{ client.fullName|title }}</p>
+                        <p><strong>Vendedor:</strong> {{ quote.createdBy.fullName|title }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Monto a Financiar:</strong> ${{ quote.amount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Tasa de Interés:</strong> {{ quote.interest }}%</p>
+                        <p><strong>Número de Cuotas:</strong> {{ quote.installments }}</p>
+                        <p><strong>Valor Cuota:</strong> ${{ quote.installmentAmount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Costo Total del Crédito:</strong> ${{ quote.totalAmount|number_format(0, ',', '.') }}</p>
+                        <p><strong>Próximo Vencimiento:</strong> {{ client.nextBillingAt|date('d-m-Y') }}</p>
+                    </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

@@ -37,6 +37,7 @@ class Quote
     private ?\DateTime $quoteDate = null;
 
     #[ORM\ManyToOne()]
+    #[ORM\JoinColumn(nullable: true)]
     private ?User $createdBy = null;
 
     #[ORM\Column()]
@@ -63,6 +64,9 @@ class Quote
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
     private ?Contingency $contingency = null;
+
+    #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    private ?\DateTimeInterface $billingDate = null;
 
     public function __construct()
     {
@@ -256,6 +260,18 @@ class Quote
     public function setContingency(?Contingency $contingency): static
     {
         $this->contingency = $contingency;
+
+        return $this;
+    }
+
+    public function getBillingDate(): ?\DateTimeInterface
+    {
+        return $this->billingDate;
+    }
+
+    public function setBillingDate(?\DateTimeInterface $billingDate): static
+    {
+        $this->billingDate = $billingDate;
 
         return $this;
     }

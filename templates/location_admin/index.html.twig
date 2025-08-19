@@ -1,0 +1,98 @@
+{% extends "@EasyAdmin/layout.html.twig" %}
+
+{% block content_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-4">
+    <div class="col-md-8">
+        <div class="card">
+            {% if not location_code %}
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-diamond" style="font-size: 8rem; color: indianred;"></i>
+                <h5 class="card-title mt-3">Código de Local no encontrado</h5>
+                <p class="card-text">Antes de poder iniciar un proceso de contingencia, debe ir a los Parámetros de
+                    Sistema y completar el campo Código Local.</p>
+                <a href="{{ ea_url().setRoute('admin_system_parameter_config') }}" class="btn btn-primary w-50">Ir a
+                    Parámetros de sistema</a>
+            </div>
+            {% elseif not location %}
+            <div class="card-body text-center">
+                <i class="bi bi-exclamation-diamond" style="font-size: 8rem; color: indianred;"></i>
+                <h5 class="card-title mt-3">El Código de Local indicado no corresponde a uno de los locales registrados.
+                </h5>
+                <p class="card-text">Debe ir a los Parámetros de Sistema y corregir el campo Código Local.</p>
+                <a href="{{ ea_url().setRoute('admin_system_parameter_config') }}" class="btn btn-primary w-50">Ir a
+                    Parámetros de sistema</a>
+            </div>
+            {% else %}
+            {# Location is configured correctly, now check for contingency #}
+            {% if contingency %}
+            {# Active Contingency Report Card #}
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Reporte de Contingencia Activa</h5>
+                <span class="badge bg-warning text-dark">ID: {{ contingency.id }}</span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-6">
+                        <p><strong>Inicio:</strong><br>{{ contingency.startedAt|date('d-m-Y H:i') }}</p>
+                        <p><strong>Término:</strong><br><span class="badge bg-success">Activa</span></p>
+                    </div>
+                    <div class="col-6">
+                        <p><strong>Local:</strong><br>{{ contingency.location.name }} ({{ contingency.location.code }})
+                        </p>
+                        <p><strong>Iniciada por:</strong><br>{{ contingency.startedBy.fullName }}</p>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="card-title">Ventas Realizadas</h6>
+                        <p class="card-text fs-4">{{ contingency_report.salesCount|default(0) }}</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="card-title">Monto Total</h6>
+                        <p class="card-text fs-4">${{ (contingency_report.totalAmount|default(0))|number_format(0, ',',
+                            '.') }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-center">
+                <a href="{{ ea_url().setController('App\\Controller\\Admin\\ContingencyCrudController').setAction('close').setEntityId(contingency.id) }}"
+                    class="btn btn-danger w-75">Finalizar Contingencia</a>
+            </div>
+            {% else %}
+            {# No Active Contingency Card #}
+            <div class="card-body text-center">
+                <i class="bi bi-check" style="font-size: 8rem; color: var(--bs-success);"></i>
+                <h5 class="card-title mt-3">No hay contigencias activas en este Local.</h5>
+                <p class="card-text">El sistema de ventas está desactivado.</p>
+                <a href="{{ ea_url().setController('App\\Controller\\Admin\\ContingencyCrudController').setAction('new') }}" class="btn btn-primary w-50">Activar contingencia</a>
+            </div>
+            {% endif %}
+
+            {# Last Sync Info Footer #}
+            <div class="card-footer bg-light">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h6 class="mb-0">
+                            <i class="bi bi-cloud-check me-2"></i>Última Sincronización Exitosa
+                        </h6>
+                        {% if last_sync_event %}
+                        <p class="card-text mb-0"><small>Fecha: <strong>{{ last_sync_event.createdAt|date('d-m-Y H:i')
+                                    }}</strong></small></p>
+                        {% else %}
+                        <p class="card-text mb-0"><small>No se han registrado sincronizaciones exitosas.</small></p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <a href="{{ ea_url().setController('App\\Controller\\Admin\\SyncEventCrudController').setAction('manualSync') }}"
+                            class="btn btn-info btn-sm">Sincronización Manual</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -15,16 +15,22 @@ use Symfony\Component\Validator\Constraints\Length;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
 #[UniqueEntity('code')]
+#[UniqueEntity('rut')]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
+    public const ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
     public const ROLE_ADMIN = "ROLE_ADMIN";
-    public const ROLE_SUPER_USER = "ROLE_SUPER_USER";
+    public const ROLE_LOCATION_ADMIN = "ROLE_LOCATION_ADMIN";
+    public const ROLE_CASHIER = "ROLE_CASHIER";
+    public const ROLE_SELLER = "ROLE_SELLER";
     public const ROLE_USER = "ROLE_USER";
 
     public const ROLES = [
-      "Administrador del sistema" => self::ROLE_ADMIN,
-      "Usuario empresa" => self::ROLE_SUPER_USER,
-      "Usuario de tienda" => self::ROLE_USER
+      "Administrador TI" => self::ROLE_SUPER_ADMIN,
+      "Administrador" => self::ROLE_ADMIN,
+      "Tesorero de tienda" => self::ROLE_LOCATION_ADMIN,
+      "Cajero" => self::ROLE_CASHIER,
+      "Vendedor" => self::ROLE_SELLER
     ];
 
     #[ORM\Id]

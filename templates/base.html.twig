@@ -56,29 +56,11 @@
     </style>
 </head>
 <body>
-    <header class="top-bar">
-        <a href="{{ path('home') }}">
-            <img src="{{ asset('images/logo-text.png') }}" alt="Logo Multicentro">
-        </a>
-        <div>
-            {% if app.user %}
-                <span class="me-3">Bienvenido, {{ app.user.fullname }}</span>
-                <a href="{{ path('app_logout') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-box-arrow-right"></i> Salir
-                </a>
-            {% endif %}
-        </div>
-    </header>
-
     <div class="container-fluid content">
         <main>
             {% block form_content %}{% endblock %}
         </main>
     </div>
-
-    <footer class="footer">
-        Multicentro © {{ "now"|date("Y") }}
-    </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     {% block body_javascript %}{% endblock %}

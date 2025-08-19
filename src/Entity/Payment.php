@@ -10,9 +10,9 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: PaymentRepository::class)]
 class Payment
 {
-    const PAYMENT_METHOD_CASH = 'cash';
-    const PAYMENT_METHOD_CREDIT = 'credit';
-    const PAYMENT_METHOD_DEBIT = 'debit';
+    const PAYMENT_METHOD_CASH = 1;
+    const PAYMENT_METHOD_DEBIT = 5;
+    const PAYMENT_METHOD_CREDIT = 8;
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

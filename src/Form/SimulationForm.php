@@ -23,6 +23,7 @@ class SimulationForm extends AbstractType
     {
         $params = $this->em->getRepository(SystemParameter::class)->findAll();
         $params = array_combine(array_map(fn($d) => $d->getCode(), $params), $params);
+        $minInstallmentAmount = $params[SystemParameter::PARAM_MIN_INSTALLMENT_AMOUNT]->getValue();
 
         $builder
             ->add('save', HiddenType::class, [
@@ -39,7 +40,7 @@ class SimulationForm extends AbstractType
             ->add('amount', IntegerType::class, [
                 'label' => 'MONTO A FINANCIAR',
                 'attr' => [
-                    'min' => 0,
+                    'min' => $minInstallmentAmount,
                     // 'max' => $params[SystemParameter::PARAM_MAX_TOTAL]->getValue(),
                 ],
                 'required' => true,

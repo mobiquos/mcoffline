@@ -15,8 +15,6 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
-use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
-use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditor;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 
@@ -34,22 +32,24 @@ class QuoteCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
-          ->setEntityLabelInPlural("Cotizaciones")
-          ->setEntityLabelInSingular("Cotización")
-          ->setPageTitle(Crud::PAGE_NEW, "Registrar cotización")
-            ->setHelp(Crud::PAGE_INDEX, "Listado de cotizaciones realizadas durante la contingencia en curso.")
+          ->setEntityLabelInPlural("Simulaciones")
+          ->setEntityLabelInSingular("Simulación")
+            ->setDefaultSort(['id' => 'DESC'])
+          ->setPageTitle(Crud::PAGE_NEW, "Registrar simulación")
+            ->setHelp(Crud::PAGE_INDEX, "Listado de simulaciones realizadas.")
         ;
     }
 
     public function configureFields(string $pageName): iterable
     {
         return [
-            IdField::new('id', 'ID'),
-            AssociationField::new('createdBy', 'Registrado por'),
-            DateTimeField::new('quoteDate', 'Fecha/Hora'),
-            TextField::new('rut', 'RUT'),
-            IntegerField::new('amount', 'Total'),
-            IntegerField::new('installments', 'Plazo'),
+            IdField::new('id', 'ID Simulación'),
+            IdField::new('contingency.id', 'ID Contigencia'),
+            TextField::new('contingency.location.code', 'Código Local'),
+            TextField::new('rut', 'RUT cliente')->onlyOnForms(),
+            DateTimeField::new('quoteDate', 'Fecha')->formatValue(fn ($d) => $d->format("d-m-Y")),
+            AssociationField::new('createdBy', 'Vendedor'),
+            TextField::new('state', 'Estado')->setTemplatePath('admin/field/quote_state.html.twig')->onlyOnIndex(),
         ];
     }
 
@@ -72,19 +72,23 @@ class QuoteCrudController extends AbstractCrudController
     public function exportCsv(AdminContext $context): StreamedResponse
     {
         $contingency = $this->em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
-        $sales = $this->em->getRepository(Sale::class)->findBy(['contingency' => $contingency]);
+        $quotes = $this->em->getRepository(Quote::class)->findBy(['contingency' => $contingency]);
 
-        $response = new StreamedResponse(function () use ($sales) {
+        $response = new StreamedResponse(function () use ($quotes) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['Fecha y Hora', 'Código de Local', 'RUT Cliente', 'Monto', 'Cuotas'], ';');
+            fputcsv($handle, ['ID Simulación', 'ID Contingencia', 'Código Local', 'Fecha', 'Vendedor', 'Estado', 'RUT Cliente', 'Monto', 'Cuotas'], ';');
 
-            foreach ($sales as $sale) {
+            foreach ($quotes as $q) {
                 fputcsv($handle, [
-                    $sale->getCreatedAt()->format('d-m-Y H:i:s'),
-                    $sale->getQuote()->getLocationCode(),
-                    $sale->getRut(),
-                    $sale->getQuote()->getAmount(),
-                    $sale->getQuote()->getInstallments(),
+                    $q->getId(),
+                    $q->getContingency()->getId(),
+                    $q->getLocationCode(),
+                    $q->getQuoteDate()->format('d-m-Y'),
+                    $q->getCreatedBy() ? $q->getCreatedBy()->getFullName() : '',
+                    $this->getQuoteState($q),
+                    $q->getRut(),
+                    $q->getAmount(),
+                    $q->getInstallments(),
                 ], ';');
             }
 
@@ -95,5 +99,18 @@ class QuoteCrudController extends AbstractCrudController
         $response->headers->set('Content-Disposition', 'attachment; filename="contingency_sales.csv"');
 
         return $response;
+    }
+
+    private function getQuoteState(Quote $quote): string
+    {
+        if ($quote->getSale() !== null) {
+            return 'Autorizada';
+        }
+
+        if ($quote->getQuoteDate()->format('Y-m-d') < (new \DateTime())->format('Y-m-d')) {
+            return 'Rechazada';
+        }
+
+        return 'Pendiente';
     }
 }

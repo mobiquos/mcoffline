@@ -3,8 +3,11 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Client;
+use App\Entity\Location;
 use App\Entity\SyncEvent;
+use App\Entity\SystemParameter;
 use App\Form\ManualSyncForm;
+use App\Message\SyncClients;
 use App\Repository\ClientRepository;
 use Doctrine\DBAL\Types\TextType;
 use Doctrine\ORM\EntityManagerInterface;
@@ -20,9 +23,12 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Exception;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 class SyncEventCrudController extends AbstractCrudController
 {
@@ -37,12 +43,14 @@ class SyncEventCrudController extends AbstractCrudController
             ->setEntityLabelInPlural("Sincronizaciones")
             ->setEntityLabelInSingular("Sincronización")
             ->setPageTitle(Crud::PAGE_NEW, "Iniciar sincronización")
+            ->setDefaultSort(['id' => 'DESC'])
             ->setHelp(Crud::PAGE_INDEX, "Listado de sincronizaciones.");
     }
 
     public function configureFields(string $pageName): iterable
     {
         return [
+            AssociationField::new('location', 'Local'),
             DateTimeField::new('createdAt', 'Fecha'),
             AssociationField::new('createdBy', 'Iniciada por'),
             TextField::new('status', 'Estado')
@@ -55,9 +63,36 @@ class SyncEventCrudController extends AbstractCrudController
         return
         $actions->remove(Crud::PAGE_INDEX, Action::DELETE)
         ->remove(Crud::PAGE_INDEX, Action::EDIT)
-        ->add(Crud::PAGE_INDEX, Action::new("manualSync", "Sincronización manual", 'sync')->linkToCrudAction('manualSync')->createAsGlobalAction())
-        ->update(Crud::PAGE_INDEX, Action::NEW, fn (Action $action) => $action->setLabel('Iniciar sincronización'))
+        ->add(Crud::PAGE_INDEX, Action::new("manualSync", "Subir archivo de clientes", 'sync')->linkToCrudAction('manualSync')->createAsGlobalAction())
+        ->update(Crud::PAGE_INDEX, Action::NEW, fn (Action $action) => $action->setLabel('Iniciar sincronización')->linkToCrudAction('startSync'))
         ;
+    }
+
+    public function startSync(AdminContext $context, EntityManagerInterface $em, MessageBusInterface $bus, HttpClientInterface $httpClient, UrlGeneratorInterface $urlGenerator): Response
+    {
+        $param = $em->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_SERVER_ADDRESS]);
+        $locationCode = $em->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
+
+        $response = $httpClient->request('GET', $param->getValue() . '/' .$urlGenerator->generate('app_sync_pull_start', ['locationCode' => $locationCode->getValue()], UrlGeneratorInterface::RELATIVE_PATH));
+        $data = $response->toArray();
+        if ($response->getStatusCode() != 200) {
+            $aug = $this->container->get(AdminUrlGenerator::class);
+            $this->addFlash('danger', 'Ocurrio un error al intentar iniciar la sincronización.');
+            return $this->redirect($aug->setAction(Action::INDEX)->setController(static::class));
+        }
+
+        $syncEvent = new SyncEvent();
+        $syncEvent->setCreatedBy($this->getUser());
+        $syncEvent->setStatus(SyncEvent::STATUS_INPROGRESS);
+        $em->persist($syncEvent);
+        $em->flush();
+
+        $bus->dispatch(new SyncClients($data['syncEventId']));
+
+        $this->addFlash('success', 'La sincronización de clientes ha comenzado.');
+
+        $aug = $this->container->get(AdminUrlGenerator::class);
+        return $this->redirect($aug->setAction(Action::INDEX)->setController(static::class));
     }
 
     public function manualSync(AdminContext $context, EntityManagerInterface $em, AdminUrlGenerator $aug): Response
@@ -68,15 +103,17 @@ class SyncEventCrudController extends AbstractCrudController
         if ($form->isSubmitted() && $form->isValid()) {
             $this->processUploadedFiles($form);
 
-            /* @var ClientRepository */
-            $clientRepository = $em->getRepository(Client::class);
-            $clientRepository->removeAll();
+            $em->createQuery('DELETE FROM App\Entity\Client')->execute();
 
+            $locationCode = $em->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
+            $location = $em->getRepository(Location::class)->findByCode($locationCode->getValue());
 
             $entity = new SyncEvent();
             $entity->setCreatedBy($this->getUser());
             $entity->setStatus(SyncEvent::STATUS_INPROGRESS);
+            $entity->setLocation($location);
             $em->persist($entity);
+            // $em->getRepository(Client::class)->createQueryBuilder('entity')->delete();
             $em->flush();
 
             $em->beginTransaction();
