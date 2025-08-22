@@ -42,6 +42,9 @@ class Payment
     #[ORM\JoinColumn(nullable: false)]
     private ?Contingency $contingency = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $voucherContent = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
@@ -132,6 +135,18 @@ class Payment
     public function setContingency(?Contingency $contingency): static
     {
         $this->contingency = $contingency;
+
+        return $this;
+    }
+
+    public function getVoucherContent(): ?string
+    {
+        return $this->voucherContent;
+    }
+
+    public function setVoucherContent(?string $voucherContent): static
+    {
+        $this->voucherContent = $voucherContent;
 
         return $this;
     }

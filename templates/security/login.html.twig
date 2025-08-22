@@ -19,16 +19,10 @@
   <div class="alert alert-danger">{{ error.messageKey|trans(error.messageData, 'security') }}</div>
   {% endif %}
 
-  {% if app.user %}
-  <div class="mb-3">
-    You are logged in as {{ app.user.userIdentifier }}, <a href="{{ path('app_logout') }}">Logout</a>
-  </div>
-  {% endif %}
-
   <h1 class="h3 mb-3 font-weight-normal">Ingrese sus credenciales</h1>
-  <div class="form-group">
+  <div class="form-group d-none">
     <label for="username">Nombre de usuario</label>
-    <input type="text" value="{{ last_username }}" name="_username" id="username" class="form-control"
+    <input type="text" value="{{ app.user.originalUser.rut }}" name="_username" id="username" class="form-control"
       autocomplete="username" required autofocus>
   </div>
 
@@ -44,11 +38,5 @@
       Ingresar
     </button>
   </div>
-
-  {% if last_sync %}
-  <div class="mt-3 text-center">
-    <small>Última sincronización exitosa: {{ last_sync.createdAt|date('d-m-Y H:i:s') }}</small>
-  </div>
-  {% endif %}
 </form>
 {% endblock %}

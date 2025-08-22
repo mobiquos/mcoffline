@@ -37,7 +37,17 @@ class SystemParameterCrudController extends AbstractCrudController
     public function config(AdminContext $context, EntityManagerInterface $em): Response
     {
         $data = $em->getRepository(SystemParameter::class)->findAll();
-        $form = $this->createForm(SystemParametersForm::class, $data);
+        $params = [];
+        foreach ($data as $param) {
+            $config = SystemParameter::PARAMS[$param->getCode()];
+            if (isset($config['role']) && !$this->isGranted($config['role'])) {
+            } else {
+                $params[] = $param;
+            }
+        }
+
+        $form = $this->createForm(SystemParametersForm::class, $params);
+
         $form->handleRequest($context->getRequest());
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();

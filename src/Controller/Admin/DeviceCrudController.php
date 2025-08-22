@@ -45,7 +45,7 @@ class DeviceCrudController extends AbstractCrudController
 
         $response = new StreamedResponse(function () use ($devices) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['ID', 'Local', 'Dirección IP', 'Nombre', 'Número', 'Habilitado']);
+            fputcsv($handle, ['ID', 'Local', 'Dirección IP', 'Nombre POS', 'Número POS', 'Habilitado']);
 
             foreach ($devices as $device) {
                 fputcsv($handle, [
@@ -67,13 +67,19 @@ class DeviceCrudController extends AbstractCrudController
         return $response;
     }
 
+    public function configureCrud(Crud $crud): Crud
+    {
+        return $crud->setEntityLabelInPlural("Equipos")
+            ->setEntityLabelInSingular("Equipo");
+    }
+
     public function configureFields(string $pageName): iterable
     {
         return [
             AssociationField::new('location', 'Local'),
             TextField::new('ipAddress', 'Dirección IP'),
-            TextField::new('name', 'Nombre'),
-            TextField::new('number', 'Número'),
+            TextField::new('name', 'Nombre POS'),
+            TextField::new('number', 'Número POS'),
             BooleanField::new('enabled', 'Habilitado'),
         ];
     }

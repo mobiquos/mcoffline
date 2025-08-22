@@ -7,6 +7,7 @@
         <h1 class="mb-4">Contingencia Multicentro</h1>
         <p class="lead mb-5">Usuario: {{ app.user }}<span class="mx-5"></span>Fecha: {{ "now"|date("d/m/Y") }}.</p>
         <div class="row justify-content-center">
+            {% if is_granted('ROLE_SELLER') %}
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
@@ -17,6 +18,8 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
+            {% if is_granted('ROLE_SELLER') %}
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
@@ -27,8 +30,10 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
         <div class="row justify-content-center mt-3">
+            {% if is_granted('ROLE_CASHIER') %}
             <div class="col-md-6">
                 <div class="card" style="height: 120px">
                     <div class="card-body">
@@ -39,11 +44,12 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% if is_granted('ROLE_LOCATION_ADMIN') or is_granted('ROLE_ADMIN') %}
             <div class="col-md-6">
                 <div class="card" style="height: 120px">
                     <div class="card-body">
-                        <a href="{{ path('admin') }}" class="btn btn-primary w-100 py-3 h-100 d-flex flex-column align-items-center justify-content-center">
+                        <a href="{{ path('backoffice_login') }}" class="btn btn-primary w-100 py-3 h-100 d-flex flex-column align-items-center justify-content-center">
                         <h5 class="card-title">Administración</h5>
                         </a>
                     </div>

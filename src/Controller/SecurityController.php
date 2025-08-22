@@ -10,7 +10,7 @@ use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 
 class SecurityController extends AbstractController
 {
-    #[Route(path: '/test/login', name: 'app_login')]
+    #[Route(path: '/secure/login', name: 'backoffice_login')]
     public function login(AuthenticationUtils $authenticationUtils, SyncEventRepository $syncEventRepository): Response
     {
         // get the login error if there is one

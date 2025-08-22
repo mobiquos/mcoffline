@@ -6,9 +6,11 @@ use App\Entity\Client;
 use App\Entity\Contingency;
 use App\Entity\Quote;
 use App\Entity\SystemParameter;
+use App\Entity\User;
 use App\Form\SimulationForm;
 use App\Repository\ClientRepository;
 use App\Repository\SystemParameterRepository;
+use App\Repository\UserRepository;
 use App\Service\QuoteService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -63,9 +65,13 @@ class QuoteController extends AbstractController
                 return $this->render('quotes/index.html.twig', $templateParams);
             }
 
+            /** @var UserRepository */
+            $userRepository = $em->getRepository(User::class);
+            $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
+
             $location = $systemParameterRepository->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
             $data->setLocationCode($location->getValue());
-            $data->setCreatedBy($this->getUser());
+            $data->setCreatedBy($user);
             $data->setInterest($calculation['interest']);
             $data->setInstallmentAmount($calculation['installment_amount']);
             $data->setTotalAmount($calculation['total']);

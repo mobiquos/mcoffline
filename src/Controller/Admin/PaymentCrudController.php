@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Contingency;
 use App\Entity\Payment;
 use App\Entity\Quote;
+use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -16,6 +17,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PaymentCrudController extends AbstractCrudController
@@ -54,8 +56,13 @@ class PaymentCrudController extends AbstractCrudController
             ->setCssClass('btn btn-success')
             ->createAsGlobalAction();
 
+        $showVoucherAction = Action::new('showVoucher', 'Ver Voucher', 'fa fa-file-text-o')
+            ->linkToCrudAction('showVoucher');
+
         return $actions
             ->add(Crud::PAGE_INDEX, $exportAction)
+            ->add(Crud::PAGE_INDEX, $showVoucherAction)
+            ->setPermission('showVoucher', User::ROLE_SUPER_ADMIN)
             ->disable(Action::DELETE, Action::EDIT, Action::NEW);
     }
 
@@ -87,5 +94,14 @@ class PaymentCrudController extends AbstractCrudController
         $response->headers->set('Content-Disposition', 'attachment; filename="contingency_sales.csv"');
 
         return $response;
+    }
+
+    #[AdminAction(routeName: 'show_voucher', routePath: '/{entityId}/voucher')]
+    public function showVoucher(AdminContext $context): Response
+    {
+        $payment = $context->getEntity()->getInstance();
+        return $this->render('admin/voucher.html.twig', [
+            'voucher_content' => $payment->getVoucherContent(),
+        ]);
     }
 }

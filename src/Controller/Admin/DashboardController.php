@@ -27,6 +27,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGeneratorInterface;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 #[AdminDashboard(routePath: '/admin', routeName: 'admin')]
 class DashboardController extends AbstractDashboardController
@@ -35,6 +36,7 @@ class DashboardController extends AbstractDashboardController
     {
         return array_merge(parent::getSubscribedServices(), [
             'doctrine' => '?'.EntityManagerInterface::class,
+            UrlGeneratorInterface::class => '?'.UrlGeneratorInterface::class,
         ]);
     }
 
@@ -123,13 +125,15 @@ class DashboardController extends AbstractDashboardController
 
         /** @var AdminUrlGeneratorInterface $urlGenerator */
         $urlGenerator = $this->container->get(AdminUrlGenerator::class);
+        /** @var UrlGeneratorInterface $urlGenerator2 */
+        $urlGenerator2 = $this->container->get(UrlGeneratorInterface::class);
         $em = $this->container->get('doctrine');
         $locationCode = $em->getRepository(SystemParameter::class)->find(SystemParameter::PARAM_LOCATION_CODE);
         $location = $em->getRepository(Location::class)->findOneBy(['code' => $locationCode]);
 
         yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home')->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToCrud('Abrir/Cerrar Contingencia', 'fas fa-tool', Contingency::class)->setAction('openClose');
-        yield MenuItem::linkToRoute('Simuladores', 'fas fa-tool', 'home');
+        yield MenuItem::linkToUrl('Simuladores', 'fas fa-tool', $urlGenerator2->generate('home', [], UrlGeneratorInterface::ABSOLUTE_URL));
 
         yield MenuItem::section("Detalle contingencias");
         yield MenuItem::linkToCrud('Simulaciones de Crédito', 'fas fa-dollar', Quote::class)->setPermission('ROLE_ADMIN');

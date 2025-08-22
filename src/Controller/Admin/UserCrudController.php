@@ -92,7 +92,7 @@ class UserCrudController extends AbstractCrudController
             AssociationField::new('location', 'Tienda'),
             FormField::addPanel("Credenciales")->onlyOnForms(),
             ChoiceField::new('roles', "Roles dentro del sistema")->onlyOnForms()->setRequired(true)->setChoices(User::ROLES)->allowMultipleChoices(true),
-            TextField::new('plainPassword', "Nueva contraseña")->onlyOnForms()->setRequired(true),
+            TextField::new('plainPassword', "Nueva contraseña")->onlyOnForms()->setRequired($pageName == Crud::PAGE_NEW),
         ];
     }
 

@@ -5,17 +5,21 @@ namespace App\Controller;
 use App\Entity\Client;
 use App\Entity\Contingency;
 use App\Entity\Payment;
+use App\Entity\User;
 use App\Form\PaymentFormType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInterface;
 
 class PaymentController extends AbstractController
 {
+    private const VOUCHER_PATH = '/var/vouchers';
+
     #[Route("/secure/payment", name: "app_payment")]
-    public function index(Request $request, EntityManagerInterface $em): Response
+    public function index(Request $request, EntityManagerInterface $em, TokenStorageInterface $tokenStorage): Response
     {
         $payment = new Payment();
         $form = $this->createForm(PaymentFormType::class, $payment);
@@ -27,7 +31,10 @@ class PaymentController extends AbstractController
                 $payment->setVoucherId(null);
             }
 
-            $payment->setCreatedBy($this->getUser());
+            /** @var UserRepository */
+            $userRepository = $em->getRepository(User::class);
+            $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
+            $payment->setCreatedBy($user);
 
             $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
             $payment->setContingency($contingency);
@@ -38,6 +45,8 @@ class PaymentController extends AbstractController
             $em->persist($payment);
             $em->persist($client);
             $em->flush();
+
+            $this->generateVoucher($payment, $em);
 
             // Invalidate the session
             $tokenStorage->setToken(null);
@@ -81,5 +90,24 @@ class PaymentController extends AbstractController
         return $this->render('quotes/info_client.html.twig', [
             'client' => $client,
         ]);
+    }
+
+    private function generateVoucher(Payment $payment, EntityManagerInterface $em): void
+    {
+        $voucherContent = $this->renderView('payment/voucher.txt.twig', ['payment' => $payment]);
+        $payment->setVoucherContent($voucherContent);
+
+        $projectDir = $this->getParameter('kernel.project_dir');
+        $voucherDir = $projectDir . self::VOUCHER_PATH;
+
+        if (!is_dir($voucherDir)) {
+            mkdir($voucherDir, 0777, true);
+        }
+
+        $filename = sprintf('/payment_%s_%s.txt', $payment->getId(), time());
+        file_put_contents($voucherDir . $filename, $voucherContent);
+
+        $em->persist($payment);
+        $em->flush();
     }
 }

@@ -1,0 +1,15 @@
+Voucher Pago #{{ payment.id }}
+=========================
+
+Fecha: {{ payment.createdAt|date('d-m-Y H:i:s') }}
+RUT Cliente: {{ payment.rut }}
+
+Detalle del Pago:
+-----------------
+Monto: ${{ payment.amount|number_format(0, ',', '.') }}
+Método de Pago: {{ payment.paymentMethod }}
+Voucher ID: {{ payment.voucherId }}
+
+Cajero: {{ payment.createdBy.fullName }}
+Local: {{ payment.contingency.locationCode }}
+Contingencia ID: {{ payment.contingency.id }}

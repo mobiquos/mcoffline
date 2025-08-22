@@ -24,7 +24,7 @@ class SystemParametersForm extends AbstractType
             'allow_add' => false,
             'allow_remove' => false,
             'entry_type' => SystemParameterForm::class,
-            'keep_as_list' => true
+            'keep_as_list' => true,
         ]);
     }
 }

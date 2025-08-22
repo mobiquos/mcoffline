@@ -1,0 +1,19 @@
+Voucher Venta #{{ sale.id }}
+=========================
+
+Fecha: {{ sale.createdAt|date('d-m-Y H:i:s') }}
+Folio: {{ sale.folio }}
+RUT Cliente: {{ sale.rut }}
+
+Detalle de la Venta:
+--------------------
+Monto: ${{ sale.quote.amount|number_format(0, ',', '.') }}
+Cuotas: {{ sale.quote.installments }}
+Pie: ${{ sale.quote.downPayment|number_format(0, ',', '.') }}
+Monto Cuota: ${{ sale.quote.installmentAmount|number_format(0, ',', '.') }}
+Interés: {{ sale.quote.interest }}%
+Monto Total: ${{ sale.quote.totalAmount|number_format(0, ',', '.') }}
+
+Vendedor: {{ sale.createdBy.fullName }}
+Local: {{ sale.contingency.locationCode }}
+Contingencia ID: {{ sale.contingency.id }}

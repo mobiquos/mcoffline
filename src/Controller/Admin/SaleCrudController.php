@@ -5,7 +5,9 @@ namespace App\Controller\Admin;
 use App\Entity\Contingency;
 use App\Entity\Sale;
 use App\Entity\User;
+use App\Service\QuoteService;
 use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
@@ -18,17 +20,19 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
-use Doctrine\ORM\QueryBuilder;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
+use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
-use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
-use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SaleCrudController extends AbstractCrudController
 {
-    public function __construct(private readonly EntityManagerInterface $em)
-    {
+    public function __construct(
+        private readonly EntityManagerInterface $em,
+        private readonly QuoteService $quoteService
+    ) {
     }
 
     public static function getEntityFqcn(): string
@@ -72,7 +76,7 @@ class SaleCrudController extends AbstractCrudController
             TextField::new('folio', 'Número de Boleta'),
             IntegerField::new('quote.amount', 'Monto Capital'),
             IntegerField::new('quote.installments', 'Número Cuotas'),
-            DateField::new('quote.billingDate', 'Primer Vencimiento')->setFormat('d-m-y'),
+            DateField::new('quote.billingDate', 'Primer Vencimiento')->setFormat('dd-MM-YYYY'),
         ];
     }
 
@@ -83,8 +87,13 @@ class SaleCrudController extends AbstractCrudController
             ->setCssClass('btn btn-success')
             ->createAsGlobalAction();
 
+        $showVoucherAction = Action::new('showVoucher', 'Ver Voucher', 'fa fa-file-text-o')
+            ->linkToCrudAction('showVoucher');
+
         return $actions
             ->add(Crud::PAGE_INDEX, $exportAction)
+            ->add(Crud::PAGE_INDEX, $showVoucherAction)
+            ->setPermission('showVoucher', User::ROLE_SUPER_ADMIN)
             ->remove(Crud::PAGE_INDEX, Action::DELETE)
             // ->remove(Crud::PAGE_INDEX, Action::EDIT)
             ->remove(Crud::PAGE_INDEX, Action::NEW)
@@ -99,7 +108,7 @@ class SaleCrudController extends AbstractCrudController
 
         $response = new StreamedResponse(function () use ($sales) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['Fecha y Hora', 'Código de Local', 'RUT Cliente', 'Monto', 'Cuotas'], ';');
+            fputcsv($handle, ['Fecha y Hora', 'Código de Local', 'RUT Cliente', 'Monto', 'Cuotas', 'Primer Vencimiento'], ';');
 
             foreach ($sales as $sale) {
                 fputcsv($handle, [
@@ -108,6 +117,7 @@ class SaleCrudController extends AbstractCrudController
                     $sale->getRut(),
                     $sale->getQuote()->getAmount(),
                     $sale->getQuote()->getInstallments(),
+                    $sale->getQuote()->getBillingDate()->format('d-m-Y'),
                 ], ';');
             }
 
@@ -118,5 +128,33 @@ class SaleCrudController extends AbstractCrudController
         $response->headers->set('Content-Disposition', 'attachment; filename="contingency_sales.csv"');
 
         return $response;
+    }
+
+    #[AdminAction(routeName: 'show_voucher', routePath: '/{entityId}/voucher')]
+    public function showVoucher(AdminContext $context): Response
+    {
+        $sale = $context->getEntity()->getInstance();
+        return $this->render('admin/voucher.html.twig', [
+            'voucher_content' => $sale->getVoucherContent(),
+        ]);
+    }
+
+    public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
+    {
+        // Recalculate quote values when sale is updated
+        if ($entityInstance instanceof Sale) {
+            $quote = $entityInstance->getQuote();
+            if ($quote) {
+                $calculation = $this->quoteService->calculateInstallment($quote);
+
+                $quote->setInterest($calculation['interest']);
+                $quote->setInstallmentAmount($calculation['installment_amount']);
+                $quote->setTotalAmount($calculation['total']);
+
+                $entityManager->persist($quote);
+            }
+        }
+
+        parent::updateEntity($entityManager, $entityInstance);
     }
 }

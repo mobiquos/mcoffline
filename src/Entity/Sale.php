@@ -4,6 +4,7 @@ namespace App\Entity;
 
 use App\Repository\SaleRepository;
 use App\Validator\Sale as SaleConstraint;
+use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 
@@ -38,6 +39,9 @@ class Sale
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: true)]
     private ?User $createdBy = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $voucherContent = null;
 
     public ?string $clientFullName = null;
 
@@ -119,6 +123,18 @@ class Sale
     public function setCreatedBy(?User $createdBy): static
     {
         $this->createdBy = $createdBy;
+
+        return $this;
+    }
+
+    public function getVoucherContent(): ?string
+    {
+        return $this->voucherContent;
+    }
+
+    public function setVoucherContent(?string $voucherContent): static
+    {
+        $this->voucherContent = $voucherContent;
 
         return $this;
     }

@@ -6,9 +6,10 @@ use App\Entity\Client;
 use App\Entity\Contingency;
 use App\Entity\Quote;
 use App\Entity\Sale;
+use App\Entity\User;
 use App\Form\QuoteSearchFormType;
 use App\Form\SaleFormType;
-use App\Repository\QuoteRepository;
+use App\Service\QuoteService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,6 +20,8 @@ use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorageInt
 
 class SalesController extends AbstractController
 {
+    private const VOUCHER_PATH = '/var/vouchers';
+
     #[Route(name: 'app_sales', path: '/secure/sales')]
     public function index(Request $request, EntityManagerInterface $em): Response
     {
@@ -67,7 +70,12 @@ class SalesController extends AbstractController
         $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
         $sale = new Sale();
         $sale->setContingency($contingency);
-        $sale->setCreatedBy($this->getUser());
+
+        /** @var UserRepository */
+        $userRepository = $em->getRepository(User::class);
+        $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
+
+        $sale->setCreatedBy($user);
 
         $form = $this->createForm(SaleFormType::class, $sale);
         $form->handleRequest($request);
@@ -84,12 +92,15 @@ class SalesController extends AbstractController
             $em->persist($client);
             $em->flush();
 
+            $this->generateVoucher($sale, $em);
+
             // Invalidate the session
             $tokenStorage->setToken(null);
             $request->getSession()->invalidate();
 
             return $this->render('sales/success.html.twig', [
-                'contingency' => $contingency
+                'contingency' => $contingency,
+                'entity' => $sale
             ]);
         }
 
@@ -166,5 +177,24 @@ class SalesController extends AbstractController
             'client' => $client,
             'contingency' => $contingency,
         ]);
+    }
+
+    private function generateVoucher(Sale $sale, EntityManagerInterface $em): void
+    {
+        $voucherContent = $this->renderView('sales/voucher.txt.twig', ['sale' => $sale]);
+        $sale->setVoucherContent($voucherContent);
+
+        $projectDir = $this->getParameter('kernel.project_dir');
+        $voucherDir = $projectDir . self::VOUCHER_PATH;
+
+        if (!is_dir($voucherDir)) {
+            mkdir($voucherDir, 0777, true);
+        }
+
+        $filename = sprintf('/sale_%s_%s.txt', $sale->getId(), time());
+        file_put_contents($voucherDir . $filename, $voucherContent);
+
+        $em->persist($sale);
+        $em->flush();
     }
 }
