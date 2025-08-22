@@ -6,9 +6,11 @@ use App\Entity\Client;
 use App\Entity\Location;
 use App\Entity\SyncEvent;
 use App\Entity\SystemParameter;
+use App\Entity\User;
 use App\Form\ManualSyncForm;
 use App\Message\SyncClients;
 use App\Repository\ClientRepository;
+use App\Security\CodeAuthenticatedUser;
 use Doctrine\DBAL\Types\TextType;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -82,7 +84,16 @@ class SyncEventCrudController extends AbstractCrudController
         }
 
         $syncEvent = new SyncEvent();
-        $syncEvent->setCreatedBy($this->getUser());
+
+        if ($this->getUser() instanceof CodeAuthenticatedUser) {
+            /** @var UserRepository */
+            $userRepository = $em->getRepository(User::class);
+            $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
+            $syncEvent->setCreatedBy($user);
+        } else {
+            $syncEvent->setCreatedBy($this->getUser());
+        }
+
         $syncEvent->setStatus(SyncEvent::STATUS_INPROGRESS);
         $em->persist($syncEvent);
         $em->flush();
@@ -109,7 +120,16 @@ class SyncEventCrudController extends AbstractCrudController
             $location = $em->getRepository(Location::class)->findByCode($locationCode->getValue());
 
             $entity = new SyncEvent();
-            $entity->setCreatedBy($this->getUser());
+
+            if ($this->getUser() instanceof CodeAuthenticatedUser) {
+                /** @var UserRepository */
+                $userRepository = $em->getRepository(User::class);
+                $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
+                $entity->setCreatedBy($user);
+            } else {
+                $entity->setCreatedBy($this->getUser());
+            }
+
             $entity->setStatus(SyncEvent::STATUS_INPROGRESS);
             $entity->setLocation($location);
             $em->persist($entity);

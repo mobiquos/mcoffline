@@ -7,6 +7,8 @@ use App\Entity\Location;
 use App\Entity\Payment;
 use App\Entity\Sale;
 use App\Entity\SystemParameter;
+use App\Entity\User;
+use App\Security\CodeAuthenticatedUser;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -100,7 +102,15 @@ class ContingencyCrudController extends AbstractCrudController
     {
         $contingency = new Contingency();
         $contingency->setStartedAt(new \DateTime());
-        $contingency->setStartedBy($this->getUser());
+
+        if ($this->getUser() instanceof CodeAuthenticatedUser) {
+            /** @var UserRepository */
+            $userRepository = $this->container->get('doctrine')->getRepository(User::class);
+            $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
+            $contingency->setStartedBy($user);
+        } else {
+            $contingency->setStartedBy($this->getUser());
+        }
 
         $locationCode = $this->container->get('doctrine')->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
         if ($locationCode) {
