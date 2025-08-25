@@ -45,7 +45,7 @@ class Location
     private Collection $syncEvents;
 
     #[ORM\Column(nullable: true)]
-    private ?bool $enabled = null;
+    private ?bool $enabled = true;
 
     public function __construct()
     {

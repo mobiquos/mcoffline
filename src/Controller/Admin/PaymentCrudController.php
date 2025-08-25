@@ -39,13 +39,12 @@ class PaymentCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         return [
-            AssociationField::new('contingency', 'Contingencia'),
-            AssociationField::new('createdBy', 'Registrado por'),
-            DateTimeField::new('createdAt', 'Fecha/Hora'),
-            TextField::new('rut', 'RUT'),
-            IntegerField::new('amount', 'Monto'),
-            TextField::new('paymentMethod', 'Método de pago')->setTemplatePath('admin/field/payment_method.html.twig'),
-            TextField::new('voucherId', 'ID de voucher'),
+            DateTimeField::new('createdAt', 'Fecha')->formatValue(fn ($d) => $d->format("d-m-Y"))->onlyOnIndex(),
+            TextField::new('contingency.location.code', 'Agencia')->onlyOnIndex(),
+            TextField::new('rut', 'RUT Cliente'),
+            IntegerField::new('amount', 'Monto pago'),
+            TextField::new('paymentMethod', 'Medio pago')->setTemplatePath('admin/field/payment_method.html.twig'),
+            TextField::new('voucherId', 'Comprobante Externo'),
         ];
     }
 
@@ -63,7 +62,7 @@ class PaymentCrudController extends AbstractCrudController
             ->add(Crud::PAGE_INDEX, $exportAction)
             ->add(Crud::PAGE_INDEX, $showVoucherAction)
             ->setPermission('showVoucher', User::ROLE_SUPER_ADMIN)
-            ->disable(Action::DELETE, Action::EDIT, Action::NEW);
+            ->disable(Action::DELETE, Action::NEW);
     }
 
     #[AdminAction(routeName: 'export_csv', routePath: '/export/csv')]
@@ -74,7 +73,7 @@ class PaymentCrudController extends AbstractCrudController
 
         $response = new StreamedResponse(function () use ($payments) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['Fecha', 'Agencia', 'RUT', 'Monto Pago', 'Medio Pago', 'Comprobante Externo'], ';');
+            fputcsv($handle, ['Fecha', 'Agencia', 'RUT Cliente', 'Monto Pago', 'Medio Pago', 'Comprobante Externo'], ';');
 
             foreach ($payments as $q) {
                 fputcsv($handle, [

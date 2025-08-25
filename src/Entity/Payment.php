@@ -6,6 +6,7 @@ use App\Repository\PaymentRepository;
 use App\Validator\Payment as PaymentConstraint;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: PaymentRepository::class)]
 class Payment
@@ -20,6 +21,7 @@ class Payment
     private ?int $id = null;
 
     #[ORM\Column]
+    #[Assert\Positive]
     private ?int $amount = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]

@@ -30,7 +30,7 @@ class DeviceCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
-        $exportAction = Action::new('export', 'Exportar a CSV')
+        $exportAction = Action::new('export', 'Exportar')
             ->setIcon('fa fa-file-csv')
             ->linkToCrudAction('exportDevices')
             ->setCssClass('btn btn-success')
@@ -54,7 +54,7 @@ class DeviceCrudController extends AbstractCrudController
                     $device->getIpAddress(),
                     $device->getName(),
                     $device->getNumber(),
-                    $device->isEnabled() ? 'Sí' : 'No',
+                    $device->isEnabled() ? 'Si' : 'No',
                 ]);
             }
 

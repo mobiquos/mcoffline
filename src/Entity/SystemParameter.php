@@ -50,8 +50,8 @@ class SystemParameter
             'defaultValue' => 2000,
         ],
         self::PARAM_MIN_INSTALLMENTS => [
-            'name' => "Número cuotas minimo",
-            'description' => "Número minimo de cuotas permitido para una simulación.",
+            'name' => "Número cuotas mínimo",
+            'description' => "Número mínimo de cuotas permitido para una simulación.",
             'formType' => IntegerType::class,
             'defaultValue' => 1,
         ],

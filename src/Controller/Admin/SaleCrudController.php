@@ -70,13 +70,13 @@ class SaleCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         return [
-            DateTimeField::new('createdAt', 'Fecha')->setFormat('d-m-Y')->onlyOnIndex(),
+            DateTimeField::new('createdAt', 'Fecha')->setFormat('dd/MM/YYYY')->onlyOnIndex(),
             TextField::new('contingency.location.code', 'Agencia')->onlyOnIndex(),
             TextField::new('rut', 'RUT'),
             TextField::new('folio', 'Número de Boleta'),
             IntegerField::new('quote.amount', 'Monto Capital'),
             IntegerField::new('quote.installments', 'Número Cuotas'),
-            DateField::new('quote.billingDate', 'Primer Vencimiento')->setFormat('dd-MM-YYYY'),
+            DateField::new('quote.billingDate', 'Primer Vencimiento')->setFormat('dd/MM/YYYY'),
         ];
     }
 
@@ -108,13 +108,14 @@ class SaleCrudController extends AbstractCrudController
 
         $response = new StreamedResponse(function () use ($sales) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['Fecha y Hora', 'Código de Local', 'RUT Cliente', 'Monto', 'Cuotas', 'Primer Vencimiento'], ';');
+            fputcsv($handle, ['Fecha', 'Agencia', 'RUT Cliente', 'Número de Boleta', 'Monto', 'Cuotas', 'Primer Vencimiento'], ';');
 
             foreach ($sales as $sale) {
                 fputcsv($handle, [
-                    $sale->getCreatedAt()->format('d-m-Y H:i:s'),
+                    $sale->getContingency()->getStartedAt()->format('d-m-Y'),
                     $sale->getQuote()->getLocationCode(),
                     $sale->getRut(),
+                    $sale->getFolio(),
                     $sale->getQuote()->getAmount(),
                     $sale->getQuote()->getInstallments(),
                     $sale->getQuote()->getBillingDate()->format('d-m-Y'),

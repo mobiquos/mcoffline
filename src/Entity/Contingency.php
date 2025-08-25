@@ -6,14 +6,14 @@ use App\Repository\ContingencyRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ContingencyRepository::class)]
 class Contingency
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: 'string', length: 20)]
+    private ?string $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'contingencies')]
     #[ORM\JoinColumn(nullable: true, onDelete: "SET NULL")]
@@ -36,6 +36,7 @@ class Contingency
     private ?string $startedByName = null;
 
     #[ORM\Column(length: 200, nullable: true)]
+    #[Assert\Length(200)]
     private ?string $comment = null;
 
     #[ORM\OneToMany(targetEntity: Sale::class, mappedBy: 'contingency')]
@@ -50,9 +51,16 @@ class Contingency
         $this->payments = new ArrayCollection();
     }
 
-    public function getId(): ?int
+    public function getId(): ?string
     {
         return $this->id;
+    }
+
+    public function setId(string $id): static
+    {
+        $this->id = $id;
+
+        return $this;
     }
 
     public function getLocation(): ?Location

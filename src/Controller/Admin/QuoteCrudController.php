@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Contingency;
 use App\Entity\Quote;
 use App\Entity\Sale;
+use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -32,7 +33,7 @@ class QuoteCrudController extends AbstractCrudController
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
-          ->setEntityLabelInPlural("Simulaciones")
+          ->setEntityLabelInPlural("Simulaciones Crédito")
           ->setEntityLabelInSingular("Simulación")
             ->setDefaultSort(['id' => 'DESC'])
           ->setPageTitle(Crud::PAGE_NEW, "Registrar simulación")
@@ -45,10 +46,11 @@ class QuoteCrudController extends AbstractCrudController
         return [
             IdField::new('id', 'ID Simulación'),
             IdField::new('contingency.id', 'ID Contigencia'),
-            TextField::new('contingency.location.code', 'Código Local'),
+            TextField::new('contingency.location.code', 'Agencia'),
             TextField::new('rut', 'RUT cliente')->onlyOnForms(),
             DateTimeField::new('quoteDate', 'Fecha')->formatValue(fn ($d) => $d->format("d-m-Y")),
-            AssociationField::new('createdBy', 'Vendedor'),
+            AssociationField::new('createdBy', 'Vendedor')->setFieldFqcn(User::class),
+            AssociationField::new('sale.createdBy', 'Cajero')->setFieldFqcn(User::class),
             TextField::new('state', 'Estado')->setTemplatePath('admin/field/quote_state.html.twig')->onlyOnIndex(),
         ];
     }
@@ -76,7 +78,7 @@ class QuoteCrudController extends AbstractCrudController
 
         $response = new StreamedResponse(function () use ($quotes) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['ID Simulación', 'ID Contingencia', 'Código Local', 'Fecha', 'Vendedor', 'Estado', 'RUT Cliente', 'Monto', 'Cuotas'], ';');
+            fputcsv($handle, ['ID Simulación', 'ID Contingencia', 'Código Local', 'Fecha', 'Vendedor', 'Cajero', 'Estado'], ';');
 
             foreach ($quotes as $q) {
                 fputcsv($handle, [
@@ -85,10 +87,8 @@ class QuoteCrudController extends AbstractCrudController
                     $q->getLocationCode(),
                     $q->getQuoteDate()->format('d-m-Y'),
                     $q->getCreatedBy() ? $q->getCreatedBy()->getFullName() : '',
+                    $q->getSale() && $q->getSale()->getCreatedBy() ? $q->getSale()->getCreatedBy()->getFullName() : '',
                     $this->getQuoteState($q),
-                    $q->getRut(),
-                    $q->getAmount(),
-                    $q->getInstallments(),
                 ], ';');
             }
 

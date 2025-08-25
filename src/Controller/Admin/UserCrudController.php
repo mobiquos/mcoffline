@@ -45,13 +45,13 @@ class UserCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
-        $exportAction = Action::new('export', 'Exportar a CSV')
+        $exportAction = Action::new('export', 'Exportar')
             ->setIcon('fa fa-file-csv')
             ->linkToCrudAction('exportUsers')
             ->setCssClass('btn btn-success')
             ->createAsGlobalAction();
 
-        return $actions->add(Crud::PAGE_INDEX, $exportAction);
+        return $actions->add(Crud::PAGE_INDEX, $exportAction)->disable(Action::DELETE);
     }
 
     public function exportUsers(Request $request): StreamedResponse
@@ -60,15 +60,16 @@ class UserCrudController extends AbstractCrudController
 
         $response = new StreamedResponse(function () use ($users) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['ID', 'RUT', 'Nombre Completo', 'Habilitado', 'Roles']);
+            fputcsv($handle, ['Código', 'RUT', 'Nombre Completo', 'Tienda', 'Habilitado', 'Perfil']);
 
             foreach ($users as $user) {
                 fputcsv($handle, [
-                    $user->getId(),
+                    $user->getCode(),
                     $user->getRut(),
                     $user->getFullName(),
-                    $user->isEnabled() ? 'Sí' : 'No',
-                    implode(', ', $user->getRoles()),
+                    $user->getLocation() ?? "",
+                    $user->isEnabled() ? 'Si' : 'No',
+                    $user->getRolPretty()
                 ]);
             }
 
@@ -86,12 +87,12 @@ class UserCrudController extends AbstractCrudController
     {
         return [
             BooleanField::new('enabled', "Habilitado")->renderAsSwitch(),
-            TextField::new('rut', "RUT"),
-            TextField::new('code', "Código"),
-            TextField::new('fullName', "Nombre completo del usuario"),
-            AssociationField::new('location', 'Tienda'),
+            TextField::new('code', "Código")->setRequired(true),
+            TextField::new('rut', "RUT")->setRequired(true),
+            TextField::new('fullName', "Nombre completo del usuario")->setRequired(true),
+            AssociationField::new('location', 'Tienda')->setRequired(true),
             FormField::addPanel("Credenciales")->onlyOnForms(),
-            ChoiceField::new('roles', "Roles dentro del sistema")->onlyOnForms()->setRequired(true)->setChoices(User::ROLES)->allowMultipleChoices(true),
+            ChoiceField::new('rol', "Perfil")->onlyOnForms()->setRequired(true)->setChoices(User::ROLES)->allowMultipleChoices(false),
             TextField::new('plainPassword', "Nueva contraseña")->onlyOnForms()->setRequired($pageName == Crud::PAGE_NEW),
         ];
     }

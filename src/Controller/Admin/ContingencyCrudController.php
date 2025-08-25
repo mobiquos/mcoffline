@@ -21,6 +21,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\MoneyField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -76,6 +77,7 @@ class ContingencyCrudController extends AbstractCrudController
             ->setEntityLabelInPlural("Contingencias")
             ->setEntityLabelInSingular("Contingencia")
             ->setPageTitle(Crud::PAGE_NEW, "Iniciar contingencia")
+            ->setPageTitle(Crud::PAGE_INDEX, "Histórico Contingencia")
             ->setDefaultSort(['id' => 'DESC'])
             ->setHelp(Crud::PAGE_INDEX, "Listado de contingencias.");
     }
@@ -117,6 +119,34 @@ class ContingencyCrudController extends AbstractCrudController
             $contingency->setLocationCode($locationCode->getValue());
             $location = $this->container->get('doctrine')->getRepository(Location::class)->findOneBy(['code' => $locationCode->getValue()]);
             $contingency->setLocation($location);
+
+            // Generate custom ID with location ID and correlative number
+            if ($location) {
+                $em = $this->container->get('doctrine')->getManager();
+                $qb = $em->createQueryBuilder();
+                $qb->select('c.id')
+                   ->from(Contingency::class, 'c')
+                   ->where('c.location = :location')
+                   ->setParameter('location', $location)
+                   ->orderBy('c.id', 'DESC')
+                   ->setMaxResults(1);
+
+                $lastContingency = $qb->getQuery()->getOneOrNullResult();
+
+                // Extract the correlative number from the last ID or start at 1
+                $lastCorrelative = 0;
+                if ($lastContingency) {
+                    // Try to extract the correlative from the existing ID format
+                    $parts = explode('-', $lastContingency['id']);
+                    if (count($parts) == 2) {
+                        $lastCorrelative = (int)$parts[1];
+                    }
+                }
+
+                $correlative = $lastCorrelative + 1;
+                $customId = $location->getId() . '-' . $correlative;
+                $contingency->setId($customId);
+            }
         }
         return $contingency;
     }
@@ -125,14 +155,15 @@ class ContingencyCrudController extends AbstractCrudController
     {
         return [
             IdField::new('id', "ID")->setDisabled(),
-            AssociationField::new('location', "Local")->setDisabled(),
-            DateTimeField::new('startedAt', "Inicio")->hideWhenUpdating(),
-            DateTimeField::new('endedAt', "Termino")->hideWhenCreating(),
-            AssociationField::new('startedBy', "Iniciada por")->hideOnForm()->setDisabled(),
-            IntegerField::new('salesQuantity', 'Ventas')->onlyOnIndex(),
-            IntegerField::new('salesTotalAmount', 'Monto Ventas')->onlyOnIndex(),
-            IntegerField::new('paymentsQuantity', 'Pagos')->onlyOnIndex(),
-            IntegerField::new('paymentsTotalAmount', 'Monto Pagos')->onlyOnIndex(),
+            DateTimeField::new('startedAt', "Fecha/Hora Inicio")->hideWhenUpdating(),
+            DateTimeField::new('endedAt', "Fecha/Hora Termino")->hideWhenCreating(),
+            TextField::new('location.code', "Código Local")->setDisabled(),
+            TextField::new('location.name', "Nombre Local")->setDisabled(),
+            IntegerField::new('salesQuantity', 'N Ventas')->onlyOnIndex(),
+            IntegerField::new('salesTotalAmount', 'Total Ventas')->onlyOnIndex(),
+            IntegerField::new('paymentsQuantity', 'N Pagos')->onlyOnIndex(),
+            IntegerField::new('paymentsTotalAmount', 'Total Pagos')->onlyOnIndex(),
+            TextareaField::new('comment', 'Motivo')->setMaxLength(200),
         ];
     }
 
@@ -173,27 +204,29 @@ class ContingencyCrudController extends AbstractCrudController
             $handle = fopen('php://output', 'w+');
             fputcsv($handle, [
                 'ID',
-                'Local',
-                'Inicio',
-                'Termino',
-                'Iniciada por',
-                'Ventas',
-                'Monto Ventas',
-                'Pagos',
-                'Monto Pagos'
+                'Fecha/Hora Inicio',
+                'Fecha/Hora Termino',
+                'Código Local',
+                'Nombre Local',
+                'N Ventas',
+                'Total Ventas',
+                'N Pagos',
+                'Total Pagos',
+                'Motivo Contingencia'
             ]);
 
             foreach ($contingencies as $contingency) {
                 fputcsv($handle, [
                     $contingency->getId(),
-                    $contingency->getLocation(),
-                    $contingency->getStartedAt()->format('Y-m-d H:i:s'),
-                    $contingency->getEndedAt() ? $contingency->getEndedAt()->format('Y-m-d H:i:s') : '',
-                    $contingency->getStartedBy(),
+                    $contingency->getStartedAt()->format('d-m-Y H:i:s'),
+                    $contingency->getEndedAt() ? $contingency->getEndedAt()->format('d-m-Y H:i:s') : '',
+                    $contingency->getLocation()->getCode(),
+                    $contingency->getLocation()->getName(),
                     $contingency->getSalesQuantity(),
                     $contingency->getSalesTotalAmount(),
                     $contingency->getPaymentsQuantity(),
                     $contingency->getPaymentsTotalAmount(),
+                    $contingency->getComment(),
                 ]);
             }
 
@@ -239,7 +272,7 @@ class ContingencyCrudController extends AbstractCrudController
                 fputcsv($handle, [
                     $contingency->getId(),
                     $sale->getId(),
-                    $sale->getCreatedAt()->format('Y-m-d H:i:s'),
+                    $sale->getCreatedAt()->format('d-m-Y H:i:s'),
                     $contingency->getLocationCode(),
                     $sale->getFolio(),
                     $sale->getRut(),
@@ -286,7 +319,7 @@ class ContingencyCrudController extends AbstractCrudController
                 fputcsv($handle, [
                     $contingency->getId(),
                     $payment->getId(),
-                    $payment->getCreatedAt()->format('Y-m-d H:i:s'),
+                    $payment->getCreatedAt()->format('d-m-Y H:i:s'),
                     $contingency->getLocationCode(),
                     $payment->getAmount(),
                     $payment->getPaymentMethod(),
@@ -304,15 +337,18 @@ class ContingencyCrudController extends AbstractCrudController
         return $response;
     }
 
+    #[AdminAction(routeName: 'reopen', routePath: '/{entityId}/reopen')]
     public function reopenContingency(AdminContext $context): RedirectResponse
     {
         $em = $this->container->get('doctrine')->getManager();
         $activeContingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
 
+        $contingency = $context->getEntity()->getInstance();
         if ($activeContingency) {
             $this->addFlash('danger', 'Ya existe una contingencia activa. No se puede reabrir otra.');
+        } else if  ($contingency->getStartedAt()->format("Y-m-d") != (new \DateTime())->format("Y-m-d")) {
+            $this->addFlash('danger', 'Solo puede reabrir una contigencia durante el mismo día que fue iniciada.');
         } else {
-            $contingency = $context->getEntity()->getInstance();
             $contingency->setEndedAt(null);
 
             $this->updateEntity($em, $contingency);

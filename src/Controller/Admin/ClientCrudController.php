@@ -3,6 +3,7 @@
 namespace App\Controller\Admin;
 
 use App\Entity\Client;
+use App\Entity\SyncEvent as AppSyncEvent;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -20,11 +21,21 @@ class ClientCrudController extends AbstractCrudController
 
     public function configureCrud(Crud $crud): Crud
     {
-        return $crud
+        $em = $this->container->get('doctrine');
+        $last = $em->getRepository(AppSyncEvent::class)->findLastSuccessful();
+        if ($last) {
+            $date = $last->getCreatedAt()->format('d/m/Y H:i');
+        } else {
+            $date = "-";
+        }
+
+
+
+       return $crud
           ->setEntityLabelInPlural("Clientes")
           ->setEntityLabelInSingular("Cliente")
           ->setPageTitle(Crud::PAGE_NEW, "Registrar nuevo cliente")
-            ->setHelp(Crud::PAGE_INDEX, "Listado de clientes.")
+            ->setPageTitle(Crud::PAGE_INDEX, sprintf("Listado de clientes. (Actualizado al día %s hrs)", $date))
         ;
     }
 

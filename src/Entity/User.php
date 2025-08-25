@@ -26,7 +26,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_USER = "ROLE_USER";
 
     public const ROLES = [
-      "Administrador TI" => self::ROLE_SUPER_ADMIN,
+      // "Administrador TI" => self::ROLE_SUPER_ADMIN,
       "Administrador" => self::ROLE_ADMIN,
       "Tesorero de tienda" => self::ROLE_LOCATION_ADMIN,
       "Cajero" => self::ROLE_CASHIER,
@@ -40,7 +40,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[Rut]
     #[Length(max:9)]
-    #[ORM\Column(length: 9, nullable: true, unique: true)]
+    #[ORM\Column(length: 9, nullable: false, unique: true)]
     private ?string $rut = null;
 
     #[Length(max:255)]
@@ -103,6 +103,22 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->password = $password;
 
         return $this;
+    }
+
+    public function getRol(): string
+    {
+        return current($this->roles);
+    }
+
+    public function setRol(string $rol): static
+    {
+        $this->roles = [$rol, "ROLE_USER"];
+
+        return $this;
+    }
+
+    public function getRolPretty(): string {
+        return array_find_key(self::ROLES, fn($d) => $d == $this->getRol()) ?? "";
     }
 
     /**
