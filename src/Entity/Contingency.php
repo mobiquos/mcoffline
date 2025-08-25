@@ -36,7 +36,7 @@ class Contingency
     private ?string $startedByName = null;
 
     #[ORM\Column(length: 200, nullable: true)]
-    #[Assert\Length(200)]
+    #[Assert\Length(max: 200)]
     private ?string $comment = null;
 
     #[ORM\OneToMany(targetEntity: Sale::class, mappedBy: 'contingency')]
