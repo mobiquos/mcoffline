@@ -12,7 +12,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 class Contingency
 {
     #[ORM\Id]
-    #[ORM\Column(type: 'string', length: 20)]
+    #[ORM\Column(type: 'string', length: 25)]
     private ?string $id = null;
 
     #[ORM\ManyToOne(inversedBy: 'contingencies')]
