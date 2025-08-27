@@ -31,6 +31,9 @@ class Device
     #[ORM\Column]
     private ?bool $enabled = null;
 
+    #[ORM\Column(length: 255, nullable: true)]
+    private ?string $paymentVoucherPath = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -92,6 +95,18 @@ class Device
     public function setEnabled(bool $enabled): static
     {
         $this->enabled = $enabled;
+
+        return $this;
+    }
+
+    public function getPaymentVoucherPath(): ?string
+    {
+        return $this->paymentVoucherPath;
+    }
+
+    public function setPaymentVoucherPath(?string $paymentVoucherPath): static
+    {
+        $this->paymentVoucherPath = $paymentVoucherPath;
 
         return $this;
     }

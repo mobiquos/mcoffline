@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: SyncEventRepository::class)]
 class SyncEvent
 {
+    const STATUS_PENDING = 'pending';
     const STATUS_INPROGRESS = 'in progress';
     const STATUS_SUCCESS = 'success';
     const STATUS_FAILED = 'failed';

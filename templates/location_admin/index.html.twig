@@ -56,6 +56,18 @@
                             '.') }}</p>
                     </div>
                 </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <h6 class="card-title">Pagos Realizados</h6>
+                        <p class="card-text fs-4">{{ payments_report.paymentsCount|default(0) }}</p>
+                    </div>
+                    <div class="col-6">
+                        <h6 class="card-title">Monto Total</h6>
+                        <p class="card-text fs-4">${{ (payments_report.totalAmount|default(0))|number_format(0, ',',
+                            '.') }}</p>
+                    </div>
+                </div>
             </div>
             <div class="card-footer text-center">
                 <a href="{{ ea_url().setController('App\\Controller\\Admin\\ContingencyCrudController').setAction('close').setEntityId(contingency.id) }}"

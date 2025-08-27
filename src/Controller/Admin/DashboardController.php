@@ -145,7 +145,7 @@ class DashboardController extends AbstractDashboardController
 
         yield MenuItem::section("Reportes")->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToCrud('Clientes', 'fas fa-user', Client::class)->setPermission('ROLE_ADMIN');
-        yield MenuItem::linkToCrud('Histórico Contigencia', 'fas fa-archive', Contingency::class)->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Histórico Contingencia', 'fas fa-archive', Contingency::class)->setPermission('ROLE_ADMIN');
 
         yield MenuItem::section("Configuración")->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToCrud('Sincronizaciones', 'fas fa-users', SyncEvent::class)->setAction(Action::INDEX)->setPermission(User::ROLE_SUPER_ADMIN);

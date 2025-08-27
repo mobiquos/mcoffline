@@ -45,7 +45,7 @@ class QuoteCrudController extends AbstractCrudController
     {
         return [
             IdField::new('id', 'ID Simulación'),
-            IdField::new('contingency.id', 'ID Contigencia'),
+            IdField::new('contingency.id', 'ID Contingencia'),
             TextField::new('contingency.location.code', 'Agencia'),
             TextField::new('rut', 'RUT cliente')->onlyOnForms(),
             DateTimeField::new('quoteDate', 'Fecha')->formatValue(fn ($d) => $d->format("d-m-Y")),

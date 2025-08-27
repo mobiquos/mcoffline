@@ -68,7 +68,7 @@
                     <div class="d-flex gap-2 justify-content-between align-items-center">
                         <label>Para continuar ingrese número de documento</label>
                         {{ form_widget(sale_form.folio, { attr: {class: 'form-control', style: "width: 200px", pattern: "[1-9][0-9]{6,7}", title: "El folio debe ser un número entre 1000000 y 99999999."} }) }}
-                        <button type="submit" class="btn btn-success">
+                        <button type="submit" class="btn btn-success" onclick="return confirmSubmit()">
                             <i class="bi bi-check-circle"></i> Aceptar Simulación
                         </button>
                     </div>
@@ -95,6 +95,23 @@
         folioInput.addEventListener('input', function (e) {
             this.value = this.value.replace(/[^0-9]/g, '');
         });
+    }
+
+    function confirmSubmit() {
+        event.preventDefault();
+        Swal.fire({
+            title: '¿Está seguro que desea continuar?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Submit the form
+                document.querySelector('form[name="sale_form"]').submit();
+            }
+        });
+        return false;
     }
 </script>
 {% endblock %}

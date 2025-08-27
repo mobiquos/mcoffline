@@ -61,6 +61,9 @@ class ContingencyCrudController extends AbstractCrudController
                 if ($contingency) {
                     $report = $em->getRepository(Sale::class)->getContingencyReport($contingency);
                     $params['contingency_report'] = $report;
+
+                    $paymentsReport = $em->getRepository(Payment::class)->getContingencyReport($contingency);
+                    $params['payments_report'] = $paymentsReport;
                 }
             }
         }
@@ -120,15 +123,31 @@ class ContingencyCrudController extends AbstractCrudController
             $location = $this->container->get('doctrine')->getRepository(Location::class)->findOneBy(['code' => $locationCode->getValue()]);
             $contingency->setLocation($location);
 
-            // Generate custom ID with location ID and correlative number
+            // Generate custom ID with format LXXX-AAAAMMDD-NN
             if ($location) {
                 $em = $this->container->get('doctrine')->getManager();
+                
+                // Get today's date for the ID
+                $today = new \DateTime();
+                $dateString = $today->format('Ymd');
+                
+                // Get location code (XXX part)
+                $locationCode = $location->getCode();
+                
+                // Pad location code with zeros to ensure 3 digits
+                $paddedLocationCode = str_pad($locationCode, 3, '0', STR_PAD_LEFT);
+                
+                // Find the last contingency for this location today
                 $qb = $em->createQueryBuilder();
                 $qb->select('c.id')
                    ->from(Contingency::class, 'c')
                    ->where('c.location = :location')
+                   ->andWhere('c.startedAt >= :startOfDay')
+                   ->andWhere('c.startedAt <= :endOfDay')
                    ->setParameter('location', $location)
-                   ->orderBy('c.id', 'DESC')
+                   ->setParameter('startOfDay', $today->format('Y-m-d') . ' 00:00:00')
+                   ->setParameter('endOfDay', $today->format('Y-m-d') . ' 23:59:59')
+                   ->orderBy('c.startedAt', 'DESC')
                    ->setMaxResults(1);
 
                 $lastContingency = $qb->getQuery()->getOneOrNullResult();
@@ -138,13 +157,17 @@ class ContingencyCrudController extends AbstractCrudController
                 if ($lastContingency) {
                     // Try to extract the correlative from the existing ID format
                     $parts = explode('-', $lastContingency['id']);
-                    if (count($parts) == 2) {
-                        $lastCorrelative = (int)$parts[1];
+                    if (count($parts) == 3) {
+                        $lastCorrelative = (int)$parts[2];
                     }
                 }
 
                 $correlative = $lastCorrelative + 1;
-                $customId = $location->getId() . '-' . $correlative;
+                // Format correlative with leading zeros (2 digits)
+                $formattedCorrelative = str_pad($correlative, 2, '0', STR_PAD_LEFT);
+                
+                // Create the new ID with format LXXX-AAAAMMDD-NN
+                $customId = 'L' . $paddedLocationCode . '-' . $dateString . '-' . $formattedCorrelative;
                 $contingency->setId($customId);
             }
         }

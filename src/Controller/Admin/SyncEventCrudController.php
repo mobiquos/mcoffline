@@ -112,10 +112,6 @@ class SyncEventCrudController extends AbstractCrudController
         $form->handleRequest($context->getRequest());
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $this->processUploadedFiles($form);
-
-            $em->createQuery('DELETE FROM App\Entity\Client')->execute();
-
             $locationCode = $em->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
             $location = $em->getRepository(Location::class)->findByCode($locationCode->getValue());
 
@@ -130,34 +126,27 @@ class SyncEventCrudController extends AbstractCrudController
                 $entity->setCreatedBy($this->getUser());
             }
 
-            $entity->setStatus(SyncEvent::STATUS_INPROGRESS);
+            $entity->setStatus(SyncEvent::STATUS_PENDING);
             $entity->setLocation($location);
             $em->persist($entity);
-            // $em->getRepository(Client::class)->createQueryBuilder('entity')->delete();
             $em->flush();
 
-            $em->beginTransaction();
-            try {
-                /* @var UploadedFile */
-                $uploadedFile = $form->getData()['uploadedFile'];
-
-                ini_set('memory_limit', '-1');
-                ini_set('max_execution_time', '120');
-                $filefile = file($uploadedFile->getRealPath());
-                foreach ($filefile as $line) {
-                    $client = $this->parseClient($line);
-                    $em->persist($client);
-                }
-                $em->commit();
-                $entity->setStatus(SyncEvent::STATUS_SUCCESS);
-                $em->flush();
-            } catch (Exception $e) {
-                $em->rollback();
-                $entity->setStatus(SyncEvent::STATUS_FAILED);
-                $em->flush();
-                $this->addFlash('danger', sprintf("Ocurrio un problema: %s", $e->getMessage()));
-                return $this->redirect($aug->setAction(Action::INDEX)->setController(SyncEventCrudController::class));
+            // Save the uploaded file with the SyncEvent ID as filename
+            /* @var UploadedFile */
+            $uploadedFile = $form->getData()['uploadedFile'];
+            $uploadsDirectory = $this->getParameter('kernel.project_dir') . '/var/uploads/sync';
+            
+            // Create directory if it doesn't exist
+            if (!is_dir($uploadsDirectory)) {
+                mkdir($uploadsDirectory, 0755, true);
             }
+            
+            // Move the file with the SyncEvent ID as name
+            $filename = $entity->getId() . '.csv';
+            $uploadedFile->move($uploadsDirectory, $filename);
+
+            $this->addFlash('success', 'Archivo cargado exitosamente. La sincronización comenzará en breve.');
+
             return $this->redirect($aug->setAction(Action::INDEX)->setController(SyncEventCrudController::class));
         }
 

@@ -40,7 +40,10 @@ class SystemParameterCrudController extends AbstractCrudController
         $params = [];
         foreach ($data as $param) {
             $config = SystemParameter::PARAMS[$param->getCode()];
-            if (isset($config['role']) && !$this->isGranted($config['role'])) {
+            if (isset($config['role'])) {
+                if ($this->isGranted($config['role'])) {
+                    $params[] = $param;
+                }
             } else {
                 $params[] = $param;
             }

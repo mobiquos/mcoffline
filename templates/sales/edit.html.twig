@@ -34,9 +34,30 @@
             </div>
         </div>
         {{ form_widget(form.quote) }}
-        <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+        <button type="submit" class="btn btn-primary" onclick="return confirmSubmit()">Guardar Cambios</button>
         <a href="{{ path('app_sales') }}" class="btn btn-secondary">Cancelar</a>
         {{ form_end(form) }}
     </main>
 </div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    function confirmSubmit() {
+        event.preventDefault();
+        Swal.fire({
+            title: '¿Está seguro que desea continuar?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Submit the form
+                document.querySelector('form[name="{{ form.vars.name }}"]').submit();
+            }
+        });
+        return false;
+    }
+</script>
 {% endblock %}

@@ -1,10 +1,11 @@
 {% form_theme form 'bootstrap_5_layout.html.twig' %}
 
-    {{ form_start(form, {'action': path('app_quotes'), 'method': 'POST'}) }}
+{{ form_start(form, {'action': path('app_quotes'), 'method': 'POST'}) }}
 <div class="row">
     <div class="col-md-6">
         {{ form_row(form.rut) }}
         <div id="alerts-rut"></div>
+        {{ form_row(form.amount) }}
         {{ form_rest(form) }}
     </div>
     <div class="col-md-6">
@@ -17,18 +18,18 @@
             {% endif %}
         </div>
     </div>
- </div>
+</div>
 <div class="row px-3 g-2">
-<div class="col-6">
-    <button id="btn-submit-simulation" type="submit" name="submit" value="simulate"
-        class="btn btn-primary w-100">Simular</button>
-</div>
-<div class="col-3">
-    <a href="{{ path('app_quotes') }}" class="btn btn-secondary w-100">Limpiar</a>
-</div>
-<div class="col-3">
-    <a href="{{ path('home') }}" class="btn btn-warning text-white w-100">Salir</a>
-</div>
+    <div class="col-6">
+        <button id="btn-submit-simulation" type="submit" name="simulate" value="simulate"
+            class="btn btn-primary w-100">Simular</button>
+    </div>
+    <div class="col-3">
+        <a href="{{ path('app_quotes') }}" class="btn btn-secondary w-100">Limpiar</a>
+    </div>
+    <div class="col-3">
+        <a href="{{ path('home') }}" class="btn btn-warning text-white w-100">Salir</a>
+    </div>
 </div>
 <div class="row mt-3">
     <div class="col-md-12">
@@ -54,25 +55,101 @@
                 <input type="text" class="form-control" value="${{ total|number_format(0, ',', '.') }}" disabled>
             </div>
         </div>
-        {% if installment_amount < min_installment_amount %}
-        <div class="row mt-3">
+        {% if installment_amount < min_installment_amount %} <div class="row mt-3">
             <div class="col-12">
-                <p class="alert alert-danger">El monto mínimo para el valor de una cuota es de ${{ min_installment_amount|number_format(0, ',', '.') }}</p>
+                <p class="alert alert-danger">El monto mínimo para el valor de una cuota es de ${{
+                    min_installment_amount|number_format(0, ',', '.') }}</p>
             </div>
-        </div>
-        <button id="btn-save-simulation" type="submit" name="simulation_form[save]" value="true" disabled
-            class="btn btn-success w-100">Guardar Simulación</button>
-        {% else %}
-        <button id="btn-save-simulation" type="submit" name="simulation_form[save]" value="true"
-            class="btn btn-success w-100 mt-3">Guardar Simulación</button>
-        {% endif %}
-        {% endif %}
     </div>
+    <button id="btn-save-simulation" type="submit" name="simulation_form[save]" value="true" disabled
+        class="btn btn-success w-100">Guardar Simulación</button>
+    {% else %}
+    <button type="button" value="true"
+        class="btn btn-success w-100 mt-3" onclick="return confirmSubmit()">Guardar Simulación</button>
+
+    <button id="btn-save-simulation" type="submit" name="simulation_form[save]" value="true"
+        class="btn d-none">Guardar Simulación</button>
+    {% endif %}
+    {% endif %}
+</div>
 </div>
 
-    {{ form_end(form) }}
+{{ form_end(form) }}
 
 <script>
+    const formatter = new Intl.NumberFormat("de-DE"); // dot for thousands, comma for decimals
+    function setupFormattedNumberInput(input, errorEl) {
+
+        input.addEventListener("input", () => {
+            let raw = input.value.replace(/\D/g, ""); // only digits
+            input.dataset.raw = raw;
+            input.value = raw ? formatter.format(raw) : "";
+
+            // Clear error when typing
+            removeError(input);
+        });
+
+
+        input.form.addEventListener("submit", (e) => {
+            let rawValue = input.dataset.raw || "";
+            let numeric = rawValue ? parseInt(rawValue, 10) : NaN;
+
+            let min = input.getAttribute("min");
+            let max = input.getAttribute("max");
+
+            let errorMsg = "";
+
+            if (!rawValue) {
+                errorMsg = "This field is required.";
+            } else if (min && numeric < parseInt(min, 10)) {
+                errorMsg = `El monto debe ser mayor a ${formatter.format(min)}.`;
+            } else if (max && numeric > parseInt(max, 10)) {
+                errorMsg = `El monto debe ser menor a ${formatter.format(max)}.`;
+            }
+
+            if (errorMsg) {
+                e.preventDefault();
+                showError(input, errorMsg);
+                return;
+            }
+
+            // Clean formatted value before submitting
+            input.value = numeric;
+        });
+    }
+
+    function cleanInput() {
+            let rawValue = input.dataset.raw || "";
+            let numeric = rawValue ? parseInt(rawValue, 10) : NaN;
+            input.value = numeric;
+        }
+
+    function showError(input, message) {
+        removeError(input);
+
+        input.classList.add("has-error");
+
+        const errorDiv = document.createElement("div");
+        errorDiv.className = "invalid-feedback d-block";
+        errorDiv.textContent = message;
+
+        input.insertAdjacentElement("afterend", errorDiv);
+    }
+
+    function removeError(input) {
+        input.classList.remove("has-error");
+        const next = input.nextElementSibling;
+        if (next && next.classList.contains("invalid-feedback")) {
+            next.remove();
+        }
+    }
+
+    setupFormattedNumberInput(document.getElementById("simulation_form_amount"))
+    let input =  document.getElementById("simulation_form_amount");
+    let raw = input.value.replace(/\D/g, ""); // only digits
+    input.dataset.raw = raw;
+    input.value = raw ? formatter.format(raw) : "";
+
     const debounce = (callback, wait) => {
         let timeoutId = null;
         return (...args) => {
@@ -103,7 +180,26 @@
                 })
                 .then(content => {
                     panelClient.innerHTML = content;
-            });
+                });
         }, 1000));
+    }
+
+    function confirmSubmit() {
+        event.preventDefault();
+        Swal.fire({
+            title: '¿Está seguro que desea continuar?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, continuar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                cleanInput(document.querySelector('#simulation_form_amount'));
+                // const form = document.querySelector('form[name="simulation_form"]');
+                // form.submit();
+                document.querySelector("#btn-save-simulation").click();
+            }
+        });
+        return false;
     }
 </script>

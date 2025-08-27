@@ -11,6 +11,7 @@ use Symfony\Component\Form\Extension\Core\Type\HiddenType;
 use Symfony\Component\Form\Extension\Core\Type\IntegerType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
+use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class SimulationForm extends AbstractType
@@ -37,25 +38,33 @@ class SimulationForm extends AbstractType
                 ],
                 'required' => true,
             ])
-            ->add('amount', IntegerType::class, [
+            // ->add('amount', IntegerType::class, [
+            //     'label' => 'MONTO A FINANCIAR',
+            //     'attr' => [
+            //         'min' => $minInstallmentAmount,
+            //         'class' => 'number-input',
+            //         'data-min-value' => $minInstallmentAmount,
+            // ]])
+            ->add('amount', TextType::class, [
+                // 'mapped' => false,
                 'label' => 'MONTO A FINANCIAR',
                 'attr' => [
                     'min' => $minInstallmentAmount,
-                    // 'max' => $params[SystemParameter::PARAM_MAX_TOTAL]->getValue(),
-                ],
-                'required' => true,
-            ])
+                    'class' => 'number-input',
+                    'data-min-value' => $minInstallmentAmount,
+            ]])
             ->add('installments', IntegerType::class, [
                 'label' => 'NÚMERO DE CUOTAS (PLAZO)',
                 'attr' => [
                     'validationMessage' => sprintf("El rango permitido es entre 1 y %d cuotas.", $params[SystemParameter::PARAM_MAX_INSTALLMENTS]->getValue()),
+                    'class' => 'number-input',
                     // 'max' => $params[SystemParameter::PARAM_MAX_INSTALLMENTS]->getValue(),
                     'min' => 1,
-                    'step' => 1
+                    'step' => 1,
                 ],
                 'required' => true,
-            ])
-            // ->add('deferredPayment', IntegerType::class, [
+            ]);
+                    // ->add('deferredPayment', IntegerType::class, [
             //     'label' => 'PAGO DIFERIDO',
             //     'help' => 'Indique la cantidad de días que se agregarán a la fecha de vencimiento del primer pago.',
             //     'attr' => [
@@ -71,7 +80,7 @@ class SimulationForm extends AbstractType
             //     'choices' => Quote::PAYMENT_METHODS
             // ])
             // ->add('tbkNumber')
-        ;
+
     }
 
     public function configureOptions(OptionsResolver $resolver): void
