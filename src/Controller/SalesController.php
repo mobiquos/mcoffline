@@ -4,11 +4,14 @@ namespace App\Controller;
 
 use App\Entity\Client;
 use App\Entity\Contingency;
+use App\Entity\Device;
 use App\Entity\Quote;
 use App\Entity\Sale;
 use App\Entity\User;
 use App\Form\QuoteSearchFormType;
 use App\Form\SaleFormType;
+use App\Repository\ContingencyRepository;
+use App\Repository\QuoteRepository;
 use App\Service\QuoteService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -32,7 +35,24 @@ class SalesController extends AbstractController
         $sale = new Sale();
         $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
 
-        if ($form->isSubmitted() && $form->isValid()) {
+        // Check if quoteId was passed as a query parameter
+        $quoteId = $request->query->get('quoteId');
+
+        if ($quoteId) {
+            // Handle quote selection from the quotes list
+            $quote = $em->getRepository(Quote::class)->find($quoteId);
+
+            if (!$quote) {
+                $this->addFlash('danger', 'La cotización no existe.');
+            } else {
+                $client = $em->getRepository(Client::class)->findOneBy(['rut' => $quote->getRut()]);
+                if ($quote->getSale()) {
+                    $this->addFlash('danger', 'Cotización no vigente.');
+                    $quote = null;
+                }
+            }
+        } elseif ($form->isSubmitted() && $form->isValid()) {
+            // Handle manual quote search
             $data = $form->getData();
             $quoteId = $data['quote_id'];
 
@@ -75,7 +95,12 @@ class SalesController extends AbstractController
         $userRepository = $em->getRepository(User::class);
         $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
 
+        // Find device by IP address
+        $ipAddress = $request->getClientIp();
+        $device = $em->getRepository(Device::class)->findOneBy(['ipAddress' => $ipAddress]);
+
         $sale->setCreatedBy($user);
+        $sale->setDevice($device);
 
         $form = $this->createForm(SaleFormType::class, $sale);
         $form->handleRequest($request);
@@ -117,10 +142,21 @@ class SalesController extends AbstractController
     }
 
     #[Route(name: 'app_sales_quotes', path: '/secure/sales/quotes')]
-    public function todayQuotes(EntityManagerInterface $em): Response
+    public function todayQuotes(ContingencyRepository $contingencyRepository, QuoteRepository $quoteRepository): Response
     {
-        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
-        $quotes = $em->getRepository(Quote::class)->findWithClients($contingency);
+        $contingency = $contingencyRepository->findOneBy(['endedAt' => null]);
+        $quotes = $quoteRepository->createQueryBuilder('q')
+            ->select("q.id as id, q.quoteDate as quoteDate, q.rut as rut, q.amount as amount, CONCAT(c.firstLastName, ' ', c.secondLastName, ' ', c.name) as clientName")
+            ->leftJoin('App\Entity\Client', 'c', 'WITH', 'q.rut = c.rut')
+            ->leftJoin('q.sale', 's')
+            ->andWhere('q.contingency = :contingency')
+            ->andWhere('DATE(q.quoteDate) = :today')
+            ->andWhere('s.id IS NULL')
+            ->setParameter('contingency', $contingency)
+            ->setParameter('today', (new \DateTime)->format("Y-m-d"))
+            ->orderBy('q.quoteDate', 'DESC')
+            ->getQuery()
+            ->getScalarResult();
 
         return $this->render('sales/today_quotes.html.twig', [
             'quotes' => $quotes,
@@ -181,6 +217,8 @@ class SalesController extends AbstractController
 
     private function generateVoucher(Sale $sale, EntityManagerInterface $em): void
     {
+        if ($sale->getDevice() == null) return;
+
         $voucherContent = $this->renderView('sales/voucher.txt.twig', ['sale' => $sale]);
         $sale->setVoucherContent($voucherContent);
 

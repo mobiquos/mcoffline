@@ -1,15 +1,21 @@
-Voucher Pago #{{ payment.id }}
-=========================
+{% set p = payment %}
+        Aceptación de Comprobante de Pago
 
-Fecha: {{ payment.createdAt|date('d-m-Y H:i:s') }}
-RUT Cliente: {{ payment.rut }}
+Fecha            : {{ p.createdAt|date('d/m/Y') }}  Local : {{ p.contigency.location.code }}
+Rut Cliente      : {{ p.rut }}
+Nombre Cliente   : {{ client.fullName }}
+Teléfono Cliente :
 
-Detalle del Pago:
------------------
-Monto: ${{ payment.amount|number_format(0, ',', '.') }}
-Método de Pago: {{ payment.paymentMethod }}
-Voucher ID: {{ payment.voucherId }}
+Información de Pago
 
-Cajero: {{ payment.createdBy.fullName }}
-Local: {{ payment.contingency.locationCode }}
-Contingencia ID: {{ payment.contingency.id }}
+Nº Pago: {{ p.voucherId }}
+Monto Abonado : {{ p.amount }}
+Medio de Pago : {{ p.paymentMethod }}
+
+Nombre Cajero : {{ p.createdBy.fullName|default("") }}
+Número Caja   : {{ p.device.number|default("") }}
+
+
+      _____________________________________
+                 Firma Cliente
+

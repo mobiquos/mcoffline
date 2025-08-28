@@ -126,17 +126,17 @@ class ContingencyCrudController extends AbstractCrudController
             // Generate custom ID with format LXXX-AAAAMMDD-NN
             if ($location) {
                 $em = $this->container->get('doctrine')->getManager();
-                
+
                 // Get today's date for the ID
                 $today = new \DateTime();
                 $dateString = $today->format('Ymd');
-                
+
                 // Get location code (XXX part)
                 $locationCode = $location->getCode();
-                
+
                 // Pad location code with zeros to ensure 3 digits
                 $paddedLocationCode = str_pad($locationCode, 3, '0', STR_PAD_LEFT);
-                
+
                 // Find the last contingency for this location today
                 $qb = $em->createQueryBuilder();
                 $qb->select('c.id')
@@ -165,7 +165,7 @@ class ContingencyCrudController extends AbstractCrudController
                 $correlative = $lastCorrelative + 1;
                 // Format correlative with leading zeros (2 digits)
                 $formattedCorrelative = str_pad($correlative, 2, '0', STR_PAD_LEFT);
-                
+
                 // Create the new ID with format LXXX-AAAAMMDD-NN
                 $customId = 'L' . $paddedLocationCode . '-' . $dateString . '-' . $formattedCorrelative;
                 $contingency->setId($customId);
@@ -186,7 +186,7 @@ class ContingencyCrudController extends AbstractCrudController
             IntegerField::new('salesTotalAmount', 'Total Ventas')->onlyOnIndex(),
             IntegerField::new('paymentsQuantity', 'N Pagos')->onlyOnIndex(),
             IntegerField::new('paymentsTotalAmount', 'Total Pagos')->onlyOnIndex(),
-            TextareaField::new('comment', 'Motivo')->setMaxLength(200),
+            TextareaField::new('comment', 'Motivo')->setMaxLength(200)->hideOnIndex(),
         ];
     }
 
@@ -257,7 +257,7 @@ class ContingencyCrudController extends AbstractCrudController
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="contingencies.csv"');
+        $response->headers->set('Content-Disposition', 'attachment; filename="Historico_Contingencias.csv"');
 
         return $response;
     }
@@ -314,7 +314,7 @@ class ContingencyCrudController extends AbstractCrudController
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="contingency_sales.csv"');
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Ventas_%s.csv"', $contingency->getCode()));
 
         return $response;
     }
@@ -355,7 +355,7 @@ class ContingencyCrudController extends AbstractCrudController
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="contingency_payments.csv"');
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Pagos_%s.csv"', $contingency->getCode()));
 
         return $response;
     }

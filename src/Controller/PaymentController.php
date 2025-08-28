@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Client;
 use App\Entity\Contingency;
+use App\Entity\Device;
 use App\Entity\Payment;
 use App\Entity\User;
 use App\Form\PaymentFormType;
@@ -36,11 +37,16 @@ class PaymentController extends AbstractController
             $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
             $payment->setCreatedBy($user);
 
+            // Find device by IP address
+            $ipAddress = $request->getClientIp();
+            $device = $em->getRepository(Device::class)->findOneBy(['ipAddress' => $ipAddress]);
+            $payment->setDevice($device);
+
             $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
             $payment->setContingency($contingency);
 
             $client = $em->getRepository(Client::class)->findOneBy(['rut' => $payment->getRut()]);
-            $client->setCreditAvailable(min($client->getCreditAvailable() + $payment->getAmount(), $client->getCreditLimit()));
+            // $client->setCreditAvailable(min($client->getCreditAvailable() + $payment->getAmount(), $client->getCreditLimit()));
 
             $em->persist($payment);
             $em->persist($client);
@@ -54,14 +60,22 @@ class PaymentController extends AbstractController
 
             return $this->render('payment/success.html.twig', [
                 'entity' => $payment,
+                'client' => $client,
                 'contingency' => $contingency,
             ]);
         }
 
-        return $this->render('payment/index.html.twig', [
+        $params = [
             'form' => $form->createView(),
             'contingency' => $contingency,
-        ]);
+        ];
+
+        if ($payment->getRut()) {
+            $client = $em->getRepository(Client::class)->findOneBy(['rut' => str_replace(['.', '-'], '', $payment->getRut())]);
+            $params['client'] = $client;
+        }
+
+        return $this->render('payment/index.html.twig', $params);
     }
 
     #[Route(name: 'app_payment_rut', path: '/payment/rut')]

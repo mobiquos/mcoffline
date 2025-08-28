@@ -11,11 +11,16 @@ use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
+use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
+use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
+use EasyCorp\Bundle\EasyAdminBundle\Filter\TextFilter;
+use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
+use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
 
@@ -28,6 +33,15 @@ class QuoteCrudController extends AbstractCrudController
     public static function getEntityFqcn(): string
     {
         return Quote::class;
+    }
+
+    public function configureFilters(Filters $filters): Filters
+    {
+        return $filters
+            ->add(DateTimeFilter::new('quoteDate', 'Fecha de simulación')->setFormTypeOption('value_type', DateType::class))
+            ->add(EntityFilter::new('contingency', 'Contingencia'))
+            ->add(TextFilter::new('rut', 'RUT cliente'))
+        ;
     }
 
     public function configureCrud(Crud $crud): Crud
@@ -96,7 +110,7 @@ class QuoteCrudController extends AbstractCrudController
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', 'attachment; filename="contingency_sales.csv"');
+        $response->headers->set('Content-Disposition', 'attachment; filename="Simulaciones_Credito.csv"');
 
         return $response;
     }

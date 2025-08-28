@@ -50,7 +50,8 @@ class PaymentValidator extends ConstraintValidator
                 ->addViolation();
         }
 
-        if ($value->getPaymentMethod() === PaymentEntity::PAYMENT_METHOD_CASH && $value->getAmount() % 10 !== 0) {
+        // dd($value->getPaymentMethod() === PaymentEntity::PAYMENT_METHOD_CASH);
+        if ($value->getPaymentMethod() === PaymentEntity::PAYMENT_METHOD_CASH && ($value->getAmount() % 10) !== 0) {
             $this->context->buildViolation($constraint->amountNotDivisibleBy10Message)
                 ->atPath('amount')
                 ->addViolation();

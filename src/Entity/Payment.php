@@ -11,9 +11,9 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: PaymentRepository::class)]
 class Payment
 {
-    const PAYMENT_METHOD_CASH = 1;
-    const PAYMENT_METHOD_DEBIT = 5;
-    const PAYMENT_METHOD_CREDIT = 8;
+    const PAYMENT_METHOD_CASH = "1";
+    const PAYMENT_METHOD_DEBIT = "5";
+    const PAYMENT_METHOD_CREDIT = "8";
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -31,7 +31,7 @@ class Payment
     #[ORM\JoinColumn(nullable: false)]
     private ?User $createdBy = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 2)]
     private ?string $paymentMethod = null;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -39,6 +39,10 @@ class Payment
 
     #[ORM\Column(length: 9)]
     private ?string $rut = null;
+
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Device $device = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
@@ -125,6 +129,18 @@ class Payment
     public function setRut(string $rut): static
     {
         $this->rut = $rut;
+
+        return $this;
+    }
+
+    public function getDevice(): ?Device
+    {
+        return $this->device;
+    }
+
+    public function setDevice(?Device $device): static
+    {
+        $this->device = $device;
 
         return $this;
     }

@@ -65,6 +65,10 @@ class Quote
     #[ORM\JoinColumn(nullable: false)]
     private ?Contingency $contingency = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Device $device = null;
+
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $billingDate = null;
 
@@ -272,6 +276,18 @@ class Quote
     public function setBillingDate(?\DateTimeInterface $billingDate): static
     {
         $this->billingDate = $billingDate;
+
+        return $this;
+    }
+
+    public function getDevice(): ?Device
+    {
+        return $this->device;
+    }
+
+    public function setDevice(?Device $device): static
+    {
+        $this->device = $device;
 
         return $this;
     }

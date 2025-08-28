@@ -60,15 +60,15 @@ class UserCrudController extends AbstractCrudController
 
         $response = new StreamedResponse(function () use ($users) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['Código', 'RUT', 'Nombre Completo', 'Tienda', 'Habilitado', 'Perfil']);
+            fputcsv($handle, ['Habilitado', 'Código', 'RUT', 'Nombre Completo', 'Tienda', 'Perfil']);
 
             foreach ($users as $user) {
                 fputcsv($handle, [
+                    $user->isEnabled() ? 'Si' : 'No',
                     $user->getCode(),
                     $user->getRut(),
                     $user->getFullName(),
                     $user->getLocation() ?? "",
-                    $user->isEnabled() ? 'Si' : 'No',
                     $user->getRolPretty()
                 ]);
             }

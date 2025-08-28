@@ -9,7 +9,8 @@ class Sale extends Constraint
 {
     public $message = 'El RUT "{{ rut }}" no es valido.';
     public $clientNotFoundMessage = 'El cliente con RUT "{{ rut }}" no está registrado.';
-    public $folioExistsMessage = 'El número de boleta "{{ folio }}" ya está registrada durante la contingencia.';
+    public $folioMissingMessage = 'El número DTE es obligatorio.';
+    public $folioExistsMessage = 'El número DTE "{{ folio }}" ya está registrada durante la contingencia.';
     public $quoteNotValidMessage = 'La cotización #{{ quote }} no está vigente.';
 
     public function __construct(

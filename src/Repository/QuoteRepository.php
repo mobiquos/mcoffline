@@ -26,18 +26,6 @@ class QuoteRepository extends ServiceEntityRepository
             ->getResult();
     }
 
-    public function findWithClients($contingency): array
-    {
-        return $this->createQueryBuilder('q')
-            ->select("q.id as id, q.quoteDate as quoteDate, q.rut as rut, q.amount as amount, CONCAT(c.firstLastName, ' ', c.secondLastName, ' ', c.name) as clientName")
-            ->leftJoin('App\Entity\Client', 'c', 'WITH', 'q.rut = c.rut')
-            ->andWhere('q.contingency = :contingency')
-            ->setParameter('contingency', $contingency)
-            ->orderBy('q.quoteDate', 'DESC')
-            ->getQuery()
-            ->getScalarResult();
-    }
-
     //    /**
     //     * @return Quote[] Returns an array of Quote objects
     //     */

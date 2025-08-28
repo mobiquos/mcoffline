@@ -4,6 +4,7 @@ namespace App\Controller;
 
 use App\Entity\Client;
 use App\Entity\Contingency;
+use App\Entity\Device;
 use App\Entity\Quote;
 use App\Entity\SystemParameter;
 use App\Entity\User;
@@ -69,6 +70,10 @@ class QuoteController extends AbstractController
             $userRepository = $em->getRepository(User::class);
             $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
 
+            // Find device by IP address
+            $ipAddress = $request->getClientIp();
+            $device = $em->getRepository(Device::class)->findOneBy(['ipAddress' => $ipAddress]);
+
             $location = $systemParameterRepository->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
             $data->setLocationCode($location->getValue());
             $data->setCreatedBy($user);
@@ -76,6 +81,7 @@ class QuoteController extends AbstractController
             $data->setInstallmentAmount($calculation['installment_amount']);
             $data->setTotalAmount($calculation['total']);
             $data->setBillingDate($dueDate);
+            $data->setDevice($device);
 
             $data->setContingency($contingency);
 

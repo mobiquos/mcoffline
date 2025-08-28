@@ -40,6 +40,10 @@ class Sale
     #[ORM\JoinColumn(nullable: true)]
     private ?User $createdBy = null;
 
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Device $device = null;
+
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $voucherContent = null;
 
@@ -123,6 +127,18 @@ class Sale
     public function setCreatedBy(?User $createdBy): static
     {
         $this->createdBy = $createdBy;
+
+        return $this;
+    }
+
+    public function getDevice(): ?Device
+    {
+        return $this->device;
+    }
+
+    public function setDevice(?Device $device): static
+    {
+        $this->device = $device;
 
         return $this;
     }

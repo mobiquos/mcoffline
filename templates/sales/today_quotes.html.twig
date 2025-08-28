@@ -26,7 +26,7 @@
                                 <th>RUT</th>
                                 <th>NOMBRE</th>
                                 <th>Monto</th>
-                                <th></th>
+                                <th>Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -40,6 +40,9 @@
                                     <td>
                                         <a href="{{ path('app_sales_quote_detail', {id: quote.id}) }}" class="btn btn-primary btn-sm">
                                             <i class="bi bi-search"></i>
+                                        </a>
+                                        <a href="{{ path('app_sales', {quoteId: quote.id}) }}" class="btn btn-success btn-sm">
+                                            <i class="bi bi-check-circle"></i> Seleccionar
                                         </a>
                                     </td>
                                 </tr>

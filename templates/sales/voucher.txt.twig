@@ -1,19 +1,35 @@
-Voucher Venta #{{ sale.id }}
-=========================
+{% set s = sale %}
+   Aceptacion de Comprobante de Cargo
+         No Valido como Boleta
 
-Fecha: {{ sale.createdAt|date('d-m-Y H:i:s') }}
-Folio: {{ sale.folio }}
-RUT Cliente: {{ sale.rut }}
+Fecha           : {{ s.createdAt|date('d/m/Y')}}  Local : {{ s.contingency.location.code }}
+Rut Cliente     :
+Nombre Cliente  :
+Teléfono Cliente:
 
-Detalle de la Venta:
---------------------
-Monto: ${{ sale.quote.amount|number_format(0, ',', '.') }}
-Cuotas: {{ sale.quote.installments }}
-Pie: ${{ sale.quote.downPayment|number_format(0, ',', '.') }}
-Monto Cuota: ${{ sale.quote.installmentAmount|number_format(0, ',', '.') }}
-Interés: {{ sale.quote.interest }}%
-Monto Total: ${{ sale.quote.totalAmount|number_format(0, ',', '.') }}
+Información de Venta
 
-Vendedor: {{ sale.createdBy.fullName }}
-Local: {{ sale.contingency.locationCode }}
-Contingencia ID: {{ sale.contingency.id }}
+Nº DTE             :
+Total Boleta       :
+Monto a Financiar  :
+N Cuota            :
+Tasa de Interés    :
+Primer Vencimiento :
+Valor Cuota        :
+Costo Total Crédito:
+
+Acepto cargo en cuenta cprriente segun contrato con
+Sociendad de Credito Multicentro Limitada.
+
+Nombre Vendedor    : {{ s.quote.createdBy.fullName|default("") }}
+Nombre Cajero      : {{ s.createdBy.fullName|default("") }}
+Número Caja        : {{ s.device.number|default("") }}
+
+
+      _________________________________
+          Firma Cliente
+
+    **GRACIAS POR SU PREFERENCIA**
+#
+
+

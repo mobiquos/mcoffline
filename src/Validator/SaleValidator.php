@@ -20,6 +20,12 @@ class SaleValidator extends ConstraintValidator
             return;
         }
 
+        if (!$value->getFolio()) {
+            $this->context->buildViolation($constraint->folioMissingMessage)
+                ->atPath('folio')
+                ->addViolation();
+        }
+
         if (!Client::validateRut($value->getQuote()->getRut())) {
             $this->context->buildViolation($constraint->message)
                 ->setParameter('{{ rut }}', $value->getQuote()->getRut())

@@ -18,8 +18,11 @@ class PaymentFormType extends AbstractType
             ->add('rut', TextType::class, [
                 'label' => 'RUT del cliente',
                 'required' => true,
+                'attr' => [
+                    'placeholder' => 'ESCRIBE EL RUT (14265878K)'
+                ]
             ])
-            ->add('amount', IntegerType::class, [
+            ->add('amount', TextType::class, [
                 'label' => 'Monto',
                 'attr' => [
                     'min' => 1,

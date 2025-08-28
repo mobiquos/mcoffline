@@ -34,6 +34,7 @@ class SimulationForm extends AbstractType
             ->add('rut', TextType::class, [
                 'label' => 'RUT',
                 'attr' => [
+                    'placeholder' => 'ESCRIBE EL RUT (14265878K)',
                     'maxlength' => 10,
                 ],
                 'required' => true,
