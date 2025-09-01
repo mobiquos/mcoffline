@@ -206,7 +206,7 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToUrl('Simuladores', 'fas fa-tool', $urlGenerator2->generate('home', [], UrlGeneratorInterface::ABSOLUTE_URL));
 
         yield MenuItem::section("Detalle contingencias");
-        if ($systemVersion == "main") {
+        if ($systemVersion->getValue() == "main") {
             yield MenuItem::linkToCrud('Ventas Multicentro', 'fas fa-dollar', Sale::class);
             yield MenuItem::linkToCrud('Pagos Multicentro', 'fas fa-money-bill', Payment::class);
         } else {
