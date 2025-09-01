@@ -290,16 +290,4 @@ class Quote
 
         return $this;
     }
-
-    public function getDevice(): ?Device
-    {
-        return $this->device;
-    }
-
-    public function setDevice(?Device $device): static
-    {
-        $this->device = $device;
-
-        return $this;
-    }
 }
