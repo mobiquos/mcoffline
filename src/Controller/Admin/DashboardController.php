@@ -25,6 +25,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Config\Option\ColorScheme;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractDashboardController;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGeneratorInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -93,6 +94,74 @@ class DashboardController extends AbstractDashboardController
         ]);
     }
 
+    #[Route('/admin/upload-pdf', name: 'admin_upload_pdf', methods: ['GET', 'POST'])]
+    public function uploadPdf(Request $request): Response
+    {
+        // Handle file upload
+        if ($request->isMethod('POST')) {
+            // Get the uploaded file
+            $uploadedFile = $request->files->get('pdf_file');
+
+            if ($uploadedFile && $uploadedFile->isValid()) {
+                // Check if it's a PDF file
+                if ($uploadedFile->getMimeType() === 'application/pdf') {
+                    // Define upload directory
+                    $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/pdfs';
+
+                    // Create directory if it doesn't exist
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0777, true);
+                    }
+
+                    // Remove existing PDF file if it exists
+                    $existingFile = $uploadDir . '/manual.pdf';
+                    if (file_exists($existingFile)) {
+                        unlink($existingFile);
+                    }
+
+                    // Move the new file with a fixed name
+                    $uploadedFile->move($uploadDir, 'manual.pdf');
+
+                    // Add flash message
+                    $this->addFlash('success', 'Archivo PDF actualizado correctamente.');
+
+                    // Redirect to prevent resubmission
+                    return $this->redirectToRoute('admin_upload_pdf');
+                } else {
+                    $this->addFlash('error', 'El archivo debe ser un PDF.');
+                }
+            } else {
+                $this->addFlash('error', 'Por favor seleccione un archivo válido.');
+            }
+        }
+
+        // Check if PDF exists
+        $pdfExists = false;
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/pdfs';
+        $filepath = $uploadDir . '/manual.pdf';
+
+        if (file_exists($filepath)) {
+            $pdfExists = true;
+        }
+
+        return $this->render('admin/upload_pdf.html.twig', [
+            'pdfExists' => $pdfExists,
+        ]);
+    }
+
+    #[Route('/admin/download-pdf', name: 'admin_download_pdf')]
+    public function downloadPdf(): Response
+    {
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/pdfs';
+        $filepath = $uploadDir . '/manual.pdf';
+
+        if (!file_exists($filepath)) {
+            throw $this->createNotFoundException('Archivo no encontrado.');
+        }
+
+        return $this->file($filepath, 'manual.pdf');
+    }
+
     public function index(): Response
     {
         if ($this->isGranted(User::ROLE_SUPER_ADMIN)) {
@@ -130,17 +199,23 @@ class DashboardController extends AbstractDashboardController
         $em = $this->container->get('doctrine');
         $locationCode = $em->getRepository(SystemParameter::class)->find(SystemParameter::PARAM_LOCATION_CODE);
         $location = $em->getRepository(Location::class)->findOneBy(['code' => $locationCode]);
+        $systemVersion = $em->getRepository(SystemParameter::class)->find(SystemParameter::PARAM_VERSION_TYPE);
 
         yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home')->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToCrud('Abrir/Cerrar Contingencia', 'fas fa-tool', Contingency::class)->setAction('openClose');
         yield MenuItem::linkToUrl('Simuladores', 'fas fa-tool', $urlGenerator2->generate('home', [], UrlGeneratorInterface::ABSOLUTE_URL));
 
         yield MenuItem::section("Detalle contingencias");
-        yield MenuItem::linkToCrud('Simulaciones de Crédito', 'fas fa-dollar', Quote::class)->setPermission('ROLE_ADMIN');
-        yield MenuItem::linkToCrud('Ventas', 'fas fa-dollar', Sale::class);
-        yield MenuItem::linkToCrud('Pagos', 'fas fa-money-bill', Payment::class);
-        yield MenuItem::linkToCrud('Ventas Sysretail', 'fas fa-dollar', Sale::class)->setPermission('ROLE_ADMIN');
-        yield MenuItem::linkToCrud('Pagos Sysretail', 'fas fa-money-bill', Payment::class)->setPermission('ROLE_ADMIN');
+        if ($systemVersion == "main") {
+            yield MenuItem::linkToCrud('Ventas Multicentro', 'fas fa-dollar', Sale::class);
+            yield MenuItem::linkToCrud('Pagos Multicentro', 'fas fa-money-bill', Payment::class);
+        } else {
+            yield MenuItem::linkToCrud('Simulaciones de Crédito', 'fas fa-dollar', Quote::class)->setPermission('ROLE_ADMIN');
+            yield MenuItem::linkToCrud('Ventas', 'fas fa-dollar', Sale::class);
+            yield MenuItem::linkToCrud('Pagos', 'fas fa-money-bill', Payment::class);
+        }
+        // yield MenuItem::linkToCrud('Ventas Sysretail', 'fas fa-dollar', Sale::class)->setPermission('ROLE_ADMIN');
+        // yield MenuItem::linkToCrud('Pagos Sysretail', 'fas fa-money-bill', Payment::class)->setPermission('ROLE_ADMIN');
 
 
         yield MenuItem::section("Reportes")->setPermission('ROLE_ADMIN');
@@ -153,7 +228,7 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToCrud('Locales', 'fas fa-building', Location::class)->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToCrud('Equipos', 'fas fa-device', Device::class)->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToRoute('Parámetros de sistema', 'fas fa-gears', 'admin_system_parameter_config')->setPermission('ROLE_ADMIN');
-        yield MenuItem::linkToCrud('Manual de usuario', 'fas fa-book', SystemDocument::class)->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToRoute('Actualizar Manual', 'fas fa-file-pdf', 'admin_upload_pdf')->setPermission('ROLE_SUPER_ADMIN');
     }
 
     public function configureAssets(): Assets

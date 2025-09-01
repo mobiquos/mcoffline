@@ -17,13 +17,78 @@
             <hr>
             <p>N DTE: {{ entity.folio }}.</p>
             <p>Nota: Recuerde realizar cambio de medio de pago.</p>
-            <a href="#" class="btn btn-primary mt-3">
+            <button id="printButton" class="btn btn-primary mt-3" data-url="{{ path('app_sales_print_voucher', {id: entity.id}) }}">
                 Imprimir
-            </a>
+            </button>
             <a href="{{ path('app_contingency_login') }}" class="btn btn-warning text-white mt-3">
                 Salir
             </a>
         </div>
     </main>
 </div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+    document.getElementById('printButton').addEventListener('click', function() {
+        const button = this;
+        const originalText = button.innerHTML;
+        const url = button.dataset.url;
+
+        // Show loading state
+        button.disabled = true;
+        button.innerHTML = 'Generando...';
+
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success alert with reprint option
+                Swal.fire({
+                    title: '¡Voucher generado!',
+                    text: 'El voucher se ha generado correctamente.',
+                    icon: 'success',
+                    showCancelButton: true,
+                    confirmButtonText: 'OK',
+                    cancelButtonText: 'Imprimir nuevamente'
+                }).then((result) => {
+                    if (result.dismiss === Swal.DismissReason.cancel) {
+                        // Reprint - call the function again
+                        button.click();
+                    } else {
+                        button.innerHTML = 'Imprimir nuevamente';
+                        button.disabled = false;
+                    }
+                });
+            } else {
+                // Show error alert
+                Swal.fire({
+                    title: 'Error',
+                    text: data.message,
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            // Show error alert
+            Swal.fire({
+                title: 'Error',
+                text: 'Error al generar el voucher',
+                icon: 'error',
+                confirmButtonText: 'OK'
+            });
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+    });
+</script>
 {% endblock %}

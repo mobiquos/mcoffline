@@ -11,6 +11,7 @@ use App\Form\ManualSyncForm;
 use App\Message\SyncClients;
 use App\Repository\ClientRepository;
 use App\Security\CodeAuthenticatedUser;
+use App\Service\ResumableSyncService;
 use Doctrine\DBAL\Types\TextType;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -62,12 +63,11 @@ class SyncEventCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
-        return
-        $actions->remove(Crud::PAGE_INDEX, Action::DELETE)
-        ->remove(Crud::PAGE_INDEX, Action::EDIT)
-        ->add(Crud::PAGE_INDEX, Action::new("manualSync", "Subir archivo de clientes", 'sync')->linkToCrudAction('manualSync')->createAsGlobalAction())
-        ->update(Crud::PAGE_INDEX, Action::NEW, fn (Action $action) => $action->setLabel('Iniciar sincronización')->linkToCrudAction('startSync'))
-        ;
+        return $actions
+            ->remove(Crud::PAGE_INDEX, Action::DELETE)
+            ->remove(Crud::PAGE_INDEX, Action::EDIT)
+            ->add(Crud::PAGE_INDEX, Action::new("manualSync", "Subir archivo de clientes", 'sync')->linkToCrudAction('manualSync')->createAsGlobalAction())
+            ->update(Crud::PAGE_INDEX, Action::NEW, fn (Action $action) => $action->setLabel('Iniciar sincronización')->linkToCrudAction('startSync'));
     }
 
     public function startSync(AdminContext $context, EntityManagerInterface $em, MessageBusInterface $bus, HttpClientInterface $httpClient, UrlGeneratorInterface $urlGenerator): Response
@@ -116,6 +116,7 @@ class SyncEventCrudController extends AbstractCrudController
             $location = $em->getRepository(Location::class)->findByCode($locationCode->getValue());
 
             $entity = new SyncEvent();
+            $entity->setType(SyncEvent::TYPE_LOAD);
 
             if ($this->getUser() instanceof CodeAuthenticatedUser) {
                 /** @var UserRepository */
@@ -135,12 +136,12 @@ class SyncEventCrudController extends AbstractCrudController
             /* @var UploadedFile */
             $uploadedFile = $form->getData()['uploadedFile'];
             $uploadsDirectory = $this->getParameter('kernel.project_dir') . '/var/uploads/sync';
-            
+
             // Create directory if it doesn't exist
             if (!is_dir($uploadsDirectory)) {
                 mkdir($uploadsDirectory, 0755, true);
             }
-            
+
             // Move the file with the SyncEvent ID as name
             $filename = $entity->getId() . '.csv';
             $uploadedFile->move($uploadsDirectory, $filename);

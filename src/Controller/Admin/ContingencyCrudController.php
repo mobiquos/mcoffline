@@ -314,7 +314,7 @@ class ContingencyCrudController extends AbstractCrudController
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Ventas_%s.csv"', $contingency->getCode()));
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Ventas_%s.csv"', $contingency->getId()));
 
         return $response;
     }
@@ -355,7 +355,7 @@ class ContingencyCrudController extends AbstractCrudController
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Pagos_%s.csv"', $contingency->getCode()));
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Pagos_%s.csv"', $contingency->getId()));
 
         return $response;
     }

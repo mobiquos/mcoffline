@@ -28,6 +28,9 @@ class SystemParameter
     const PARAM_MAX_SYNC_AGE_IN_DAYS = "max_sync_age_in_days";
     const PARAM_SESSION_LIFETIME = "session_lifetime";
     const PARAM_MAX_PAYMENT_ALLOWED = "max_payment_allowed";
+    const PARAM_SALE_VOUCHER_COPIES = "sale_voucher_copies";
+    const PARAM_PAYMENT_VOUCHER_COPIES = "payment_voucher_copies";
+    const PARAM_VERSION_TYPE = "version_type";
 
     const PARAMS = [
         self::PARAM_LOCATION_CODE => [
@@ -109,6 +112,28 @@ class SystemParameter
             'description' => "Corresponde a la duración de la sesión en minutos.",
             'formType' => IntegerType::class,
             'defaultValue' => 60,
+        ],
+        self::PARAM_SALE_VOUCHER_COPIES => [
+            'name' => "Copias de voucher de venta",
+            'description' => "Número de copias que se imprimirán por cada voucher de venta.",
+            'formType' => IntegerType::class,
+            'defaultValue' => 1,
+        ],
+        self::PARAM_PAYMENT_VOUCHER_COPIES => [
+            'name' => "Copias de voucher de pago",
+            'description' => "Número de copias que se imprimirán por cada voucher de pago.",
+            'formType' => IntegerType::class,
+            'defaultValue' => 1,
+        ],
+        self::PARAM_VERSION_TYPE => [
+            'name' => "Tipo de versión del sistema",
+            'description' => "Determina qué versión del sistema mostrar: versión principal o versión por local.",
+            'formType' => ChoiceType::class,
+            'choices' => [
+                'Versión Principal' => 'main',
+                'Versión por Local' => 'location',
+            ],
+            'defaultValue' => 'main',
         ]
     ];
 

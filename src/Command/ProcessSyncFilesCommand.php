@@ -36,7 +36,7 @@ class ProcessSyncFilesCommand extends Command
         $io = new SymfonyStyle($input, $output);
 
         // Find pending sync events
-        $pendingSyncEvents = $this->entityManager->getRepository(SyncEvent::class)->findBy(['status' => SyncEvent::STATUS_PENDING]);
+        $pendingSyncEvents = $this->entityManager->getRepository(SyncEvent::class)->findBy(['status' => SyncEvent::STATUS_PENDING, 'type' => SyncEvent::TYPE_LOAD]);
 
         if (empty($pendingSyncEvents)) {
             $io->info('No pending sync events found.');
@@ -86,13 +86,12 @@ class ProcessSyncFilesCommand extends Command
                         $this->entityManager->persist($client);
 
                         // Flush every 1000 records to avoid memory issues
-                        if ($lineNumber % 1 === 0) {
+                        if ($lineNumber % 1000 === 0) {
                             $this->entityManager->flush();
                             $this->entityManager->clear();
                             // $this->entityManager->resetManager();
                         }
                     } catch (\Exception $e) {
-                        dump($line);
                         $io->warning(sprintf('Error parsing line %d: %s', $lineNumber, $e->getMessage()));
                         break;
                         // Continue with next line
@@ -100,10 +99,8 @@ class ProcessSyncFilesCommand extends Command
                 }
                 fclose($file);
 
-                // Final flush for remaining records
-                $this->entityManager->flush();
-
                 // Update status to success
+                $syncEvent = $this->entityManager->getRepository(SyncEvent::class)->find($syncEvent->getId());
                 $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
                 $this->entityManager->flush();
 
@@ -137,6 +134,7 @@ class ProcessSyncFilesCommand extends Command
         $client->setOverdue((int)$data[7]);
         $client->setNextBillingAt(\DateTime::createFromFormat("d/m/Y", $data[8]));
         $client->setLastUpdatedAt(new \DateTime());
+        // dump([$data[8], $client->getNextBillingAt()]);
 
         return $client;
     }

@@ -43,7 +43,12 @@ class SecurityController extends AbstractController
     #[Route(path: '/secure/home', name: 'home')]
     public function home(): Response
     {
-        return $this->render('index.html.twig');
-        // return $this->redirectToRoute('app_home');
+        $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/pdfs';
+        $filepath = $uploadDir . '/manual.pdf';
+        $pdfExists = file_exists($filepath);
+
+        return $this->render('index.html.twig', [
+            'pdfExists' => $pdfExists,
+        ]);
     }
 }

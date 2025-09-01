@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Device;
+use App\Entity\Location;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -14,6 +15,22 @@ class DeviceRepository extends ServiceEntityRepository
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Device::class);
+    }
+
+    /**
+     * Remove all devices for a specific location
+     *
+     * @param Location $location
+     * @return int
+     */
+    public function removeByLocation(Location $location): int
+    {
+        return $this->createQueryBuilder('d')
+            ->delete()
+            ->where('d.location = :location')
+            ->setParameter('location', $location)
+            ->getQuery()
+            ->execute();
     }
 
     //    /**

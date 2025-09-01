@@ -4,7 +4,7 @@ namespace App\Form;
 
 use App\Entity\SystemParameter;
 use Symfony\Component\Form\AbstractType;
-use Symfony\Component\Form\Extension\Core\Type\CollectionType;
+use Symfony\Component\Form\Extension\Core\Type\ChoiceType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\Form\FormEvents;
 use Symfony\Component\OptionsResolver\OptionsResolver;
@@ -17,12 +17,20 @@ class SystemParameterForm extends AbstractType
             $data = $event->getData();
             $form = $event->getForm();
             $config = SystemParameter::PARAMS[$data->getCode()];
-            $form->add('value', $config['formType'], [
+            
+            // Prepare options for the form field
+            $fieldOptions = [
                 'label' => $config['name'],
                 'help' => $config['description']
-            ]);
-        })
-        ;
+            ];
+            
+            // Add choices for ChoiceType
+            if (isset($config['choices'])) {
+                $fieldOptions['choices'] = $config['choices'];
+            }
+            
+            $form->add('value', $config['formType'], $fieldOptions);
+        });
     }
 
     public function configureOptions(OptionsResolver $resolver): void

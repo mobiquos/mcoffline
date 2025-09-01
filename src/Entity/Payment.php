@@ -37,6 +37,9 @@ class Payment
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $voucherId = null;
 
+    #[ORM\Column(length: 20, nullable: true)]
+    private ?string $publicId = null;
+
     #[ORM\Column(length: 9)]
     private ?string $rut = null;
 
@@ -117,6 +120,18 @@ class Payment
     public function setVoucherId(?string $voucherId): static
     {
         $this->voucherId = $voucherId;
+
+        return $this;
+    }
+
+    public function getPublicId(): ?string
+    {
+        return $this->publicId;
+    }
+
+    public function setPublicId(?string $publicId): static
+    {
+        $this->publicId = $publicId;
 
         return $this;
     }

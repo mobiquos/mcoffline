@@ -26,6 +26,7 @@ class QuoteSearchFormType extends AbstractType
     {
         $resolver->setDefaults([
             // Configure your form options here
+            'name' => 'a'
         ]);
     }
 }

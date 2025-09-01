@@ -7,11 +7,13 @@ use App\Repository\ClientRepository;
 use App\Repository\LocationRepository;
 use App\Repository\DeviceRepository;
 use App\Repository\SyncEventRepository;
+use App\Repository\SystemParameterRepository;
 use App\Repository\UserRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 class SyncController extends AbstractController
@@ -20,6 +22,7 @@ class SyncController extends AbstractController
         private readonly ClientRepository $clientRepository,
         private readonly DeviceRepository $deviceRepository,
         private readonly LocationRepository $locationRepository,
+        private readonly SystemParameterRepository $systemParameterRepository,
         private readonly UserRepository $userRepository,
         private readonly SyncEventRepository $syncEventRepository,
         private readonly EntityManagerInterface $entityManager,
@@ -101,6 +104,19 @@ class SyncController extends AbstractController
         ]);
     }
 
+    #[Route('/sync/pull/system-parameters', name: 'app_sync_pull_system_parameters', methods: ['GET'])]
+    public function pullSystemParameters(Request $request): JsonResponse
+    {
+        $parameters = array_map(fn($parameter) => [
+            'code' => $parameter->getCode(),
+            'value' => $parameter->getValue(),
+        ], $this->systemParameterRepository->findAll());
+
+        return $this->json([
+            'parameters' => $parameters,
+        ]);
+    }
+
     #[Route('/sync/confirm/{id}', name: 'app_sync_pull_confirm', methods: ['POST'])]
     public function confirm(int $id): JsonResponse
     {
@@ -116,5 +132,97 @@ class SyncController extends AbstractController
         return $this->json([
             'message' => 'Data sync confirmed successfully',
         ]);
+    }
+
+    #[Route('/sync/push/sales-csv', name: 'app_sync_push_sales_csv', methods: ['POST'])]
+    public function pushSalesCsv(Request $request): JsonResponse
+    {
+        try {
+            // Handle CSV file upload for sales
+            $uploadedFile = $request->files->get('file');
+            
+            if (!$uploadedFile) {
+                return $this->json(['error' => 'No file uploaded'], 400);
+            }
+
+            // Validate file type
+            if ($uploadedFile->getMimeType() !== 'text/csv' && $uploadedFile->getExtension() !== 'csv') {
+                return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
+            }
+
+            // Move file to a temporary location
+            $tempDir = sys_get_temp_dir() . '/pending_sync';
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+            
+            $fileName = 'sales_' . time() . '_' . uniqid() . '.csv';
+            $filePath = $tempDir . '/' . $fileName;
+            $uploadedFile->move($tempDir, $fileName);
+
+            // Create a pending sync event
+            $syncEvent = new SyncEvent();
+            $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
+            $syncEvent->setType(SyncEvent::TYPE_PUSH);
+            // Location will be determined when processing the file
+            
+            $this->entityManager->persist($syncEvent);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'message' => 'Sales CSV file uploaded successfully',
+                'file_path' => $filePath,
+                'sync_event_id' => $syncEvent->getId(),
+                'count' => 0 // Will be updated when processing
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to upload sales CSV: ' . $e->getMessage()], 500);
+        }
+    }
+
+    #[Route('/sync/push/payments-csv', name: 'app_sync_push_payments_csv', methods: ['POST'])]
+    public function pushPaymentsCsv(Request $request): JsonResponse
+    {
+        try {
+            // Handle CSV file upload for payments
+            $uploadedFile = $request->files->get('file');
+            
+            if (!$uploadedFile) {
+                return $this->json(['error' => 'No file uploaded'], 400);
+            }
+
+            // Validate file type
+            if ($uploadedFile->getMimeType() !== 'text/csv' && $uploadedFile->getExtension() !== 'csv') {
+                return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
+            }
+
+            // Move file to a temporary location
+            $tempDir = sys_get_temp_dir() . '/pending_sync';
+            if (!is_dir($tempDir)) {
+                mkdir($tempDir, 0755, true);
+            }
+            
+            $fileName = 'payments_' . time() . '_' . uniqid() . '.csv';
+            $filePath = $tempDir . '/' . $fileName;
+            $uploadedFile->move($tempDir, $fileName);
+
+            // Create a pending sync event
+            $syncEvent = new SyncEvent();
+            $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
+            $syncEvent->setType(SyncEvent::TYPE_PUSH);
+            // Location will be determined when processing the file
+            
+            $this->entityManager->persist($syncEvent);
+            $this->entityManager->flush();
+
+            return $this->json([
+                'message' => 'Payments CSV file uploaded successfully',
+                'file_path' => $filePath,
+                'sync_event_id' => $syncEvent->getId(),
+                'count' => 0 // Will be updated when processing
+            ]);
+        } catch (\Exception $e) {
+            return $this->json(['error' => 'Failed to upload payments CSV: ' . $e->getMessage()], 500);
+        }
     }
 }

@@ -70,10 +70,6 @@ class QuoteController extends AbstractController
             $userRepository = $em->getRepository(User::class);
             $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
 
-            // Find device by IP address
-            $ipAddress = $request->getClientIp();
-            $device = $em->getRepository(Device::class)->findOneBy(['ipAddress' => $ipAddress]);
-
             $location = $systemParameterRepository->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
             $data->setLocationCode($location->getValue());
             $data->setCreatedBy($user);
@@ -81,9 +77,15 @@ class QuoteController extends AbstractController
             $data->setInstallmentAmount($calculation['installment_amount']);
             $data->setTotalAmount($calculation['total']);
             $data->setBillingDate($dueDate);
-            $data->setDevice($device);
 
             $data->setContingency($contingency);
+
+            // Set the publicId as a correlative number for the day
+            $today = new \DateTime();
+            $data->setQuoteDate($today);
+            
+            $maxPublicId = $em->getRepository(Quote::class)->findMaxPublicIdForDate($today, $contingency);
+            $data->setPublicId($maxPublicId + 1);
 
             $em->persist($data);
             $em->flush();

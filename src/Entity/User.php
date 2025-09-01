@@ -14,8 +14,8 @@ use App\Validator\Rut;
 use Symfony\Component\Validator\Constraints\Length;
 
 #[ORM\Entity(repositoryClass: UserRepository::class)]
-#[UniqueEntity('code')]
-#[UniqueEntity('rut')]
+#[UniqueEntity('code', message: "Ya existe un usuario con el código ingresado.")]
+#[UniqueEntity('rut', message: "Ya existe un usuario con el RUT ingresado.")]
 class User implements UserInterface, PasswordAuthenticatedUserInterface
 {
     public const ROLE_SUPER_ADMIN = "ROLE_SUPER_ADMIN";
@@ -26,7 +26,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_USER = "ROLE_USER";
 
     public const ROLES = [
-      // "Administrador TI" => self::ROLE_SUPER_ADMIN,
+      "Administrador TI" => self::ROLE_SUPER_ADMIN,
       "Administrador" => self::ROLE_ADMIN,
       "Tesorero de tienda" => self::ROLE_LOCATION_ADMIN,
       "Cajero" => self::ROLE_CASHIER,

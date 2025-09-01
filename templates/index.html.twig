@@ -7,7 +7,7 @@
         <h1 class="mb-4">Contingencia Multicentro</h1>
         <p class="lead mb-5">Usuario: {{ app.user }}<span class="mx-5"></span>Fecha: {{ "now"|date("d/m/Y") }}.</p>
         <div class="row justify-content-center">
-            {% if is_granted('ROLE_SELLER') %}
+            {% if is_granted('ROLE_SELLER') or is_granted('ROLE_CASHIER') %}
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
@@ -19,7 +19,7 @@
                 </div>
             </div>
             {% endif %}
-            {% if is_granted('ROLE_SELLER') %}
+            {% if is_granted('ROLE_CASHIER') %}
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-body">
@@ -68,5 +68,21 @@
                 </div>
             </div>
         </div>
+
+        {# PDF Document section #}
+        <div class="row justify-content-center mt-5">
+            <div class="col-12">
+                {% if pdfExists %}
+                            <a href="{{ path('admin_download_pdf') }}" class="text" target="_blank">
+                                <i class="fas fa-download"></i> Descargar Manual
+                            </a>
+                {% else %}
+                    <p class="text-muted">No hay documento PDF disponible en este momento.</p>
+                {% endif %}
+            </div>
+        </div>
     </div>
+{% endblock %}
+
+{% block javascripts %}
 {% endblock %}

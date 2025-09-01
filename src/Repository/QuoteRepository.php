@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Contingency;
 use App\Entity\Quote;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -16,6 +17,16 @@ class QuoteRepository extends ServiceEntityRepository
         parent::__construct($registry, Quote::class);
     }
 
+    public function findByPublicId(int $id): array
+    {
+        return $this->createQueryBuilder('e')
+            ->where('e.publicId = :publicId')
+            ->setParameter('publicId', $id)
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getResult();
+    }
+
     public function findByRut(string $rut): array
     {
         return $this->createQueryBuilder('e')
@@ -24,6 +35,27 @@ class QuoteRepository extends ServiceEntityRepository
             ->setMaxResults(1)
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Find the maximum publicId for quotes on a specific date within a contingency
+     *
+     * @param \DateTime $date
+     * @param Contingency $contingency
+     * @return int
+     */
+    public function findMaxPublicIdForDate(\DateTime $date, Contingency $contingency): int
+    {
+        $result = $this->createQueryBuilder('q')
+            ->select('MAX(q.publicId)')
+            ->where('DATE(q.quoteDate) = :date')
+            ->andWhere('q.contingency = :contingency')
+            ->setParameter('date', $date->format('Y-m-d'))
+            ->setParameter('contingency', $contingency)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return $result ? (int)$result : 0;
     }
 
     //    /**

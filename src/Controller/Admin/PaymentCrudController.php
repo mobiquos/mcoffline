@@ -7,6 +7,7 @@ use App\Entity\Contingency;
 use App\Entity\Payment;
 use App\Entity\Quote;
 use App\Entity\User;
+use App\Service\PrintVoucherService;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
@@ -28,6 +29,13 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PaymentCrudController extends AbstractCrudController
 {
+    private PrintVoucherService $printVoucherService;
+
+    public function __construct(PrintVoucherService $printVoucherService)
+    {
+        $this->printVoucherService = $printVoucherService;
+    }
+
     public static function getEntityFqcn(): string
     {
         return Payment::class;
@@ -73,11 +81,16 @@ class PaymentCrudController extends AbstractCrudController
         $showVoucherAction = Action::new('showVoucher', 'Ver Voucher', 'fa fa-file-text-o')
             ->linkToCrudAction('showVoucher');
 
+        $reprintVoucherAction = Action::new('reprintVoucher', 'Reimprimir Voucher', 'fa fa-print')
+            ->linkToCrudAction('reprintVoucher');
+
         return $actions
             ->add(Crud::PAGE_INDEX, $exportAction)
             ->add(Crud::PAGE_INDEX, $showVoucherAction)
+            ->add(Crud::PAGE_INDEX, $reprintVoucherAction)
             ->update(Crud::PAGE_INDEX, Action::EDIT, fn(Action $action) => $action->displayIf(fn($entity) => $entity->getCreatedAt()->format("Ymd") == (new \DateTime)->format("Ymd")))
             ->setPermission('showVoucher', User::ROLE_SUPER_ADMIN)
+            ->setPermission('reprintVoucher', User::ROLE_SUPER_ADMIN)
             ->disable(Action::DELETE, Action::NEW);
     }
 
@@ -119,5 +132,26 @@ class PaymentCrudController extends AbstractCrudController
         return $this->render('admin/voucher.html.twig', [
             'voucher_content' => $payment->getVoucherContent(),
         ]);
+    }
+
+    #[AdminAction(routeName: 'reprint_voucher', routePath: '/{entityId}/reprint-voucher')]
+    public function reprintVoucher(AdminContext $context): Response
+    {
+        $payment = $context->getEntity()->getInstance();
+        
+        try {
+            // Print the voucher using the service
+            $success = $this->printVoucherService->printPaymentVoucher($payment);
+            
+            if ($success) {
+                $this->addFlash('success', 'Voucher reimprimido exitosamente.');
+            } else {
+                $this->addFlash('error', 'Error al reimprimir el voucher.');
+            }
+        } catch (\Exception $e) {
+            $this->addFlash('error', 'Error al reimprimir el voucher: ' . $e->getMessage());
+        }
+        
+        return $this->redirect($context->getReferrerUrl() ?? $this->generateUrl('admin'));
     }
 }

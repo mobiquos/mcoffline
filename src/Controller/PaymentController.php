@@ -8,6 +8,7 @@ use App\Entity\Device;
 use App\Entity\Payment;
 use App\Entity\User;
 use App\Form\PaymentFormType;
+use App\Service\PrintVoucherService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -44,6 +45,11 @@ class PaymentController extends AbstractController
 
             $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
             $payment->setContingency($contingency);
+
+            // Generate the public ID as a correlative for the day
+            $paymentRepository = $em->getRepository(Payment::class);
+            $nextCorrelative = $paymentRepository->getNextCorrelativeId(new \DateTime());
+            $payment->setPublicId(date('Ymd') . '-' . str_pad($nextCorrelative, 4, '0', STR_PAD_LEFT));
 
             $client = $em->getRepository(Client::class)->findOneBy(['rut' => $payment->getRut()]);
             // $client->setCreditAvailable(min($client->getCreditAvailable() + $payment->getAmount(), $client->getCreditLimit()));
@@ -106,20 +112,42 @@ class PaymentController extends AbstractController
         ]);
     }
 
+    #[Route(name: 'app_payment_print_voucher', path: '/payment/{id}/print-voucher', methods: ['POST'])]
+    public function printVoucher(Payment $payment, PrintVoucherService $printVoucherService): Response
+    {
+        try {
+            // Print the voucher using the service
+            $success = $printVoucherService->printPaymentVoucher($payment);
+            
+            if ($success) {
+                return new Response(json_encode([
+                    'success' => true,
+                    'message' => 'Voucher generado correctamente'
+                ]), 200, ['Content-Type' => 'application/json']);
+            } else {
+                return new Response(json_encode([
+                    'success' => false,
+                    'message' => 'Error al generar el voucher'
+                ]), 500, ['Content-Type' => 'application/json']);
+            }
+        } catch (\Exception $e) {
+            return new Response(json_encode([
+                'success' => false,
+                'message' => 'Error al generar el voucher: ' . $e->getMessage()
+            ]), 500, ['Content-Type' => 'application/json']);
+        }
+    }
+
     private function generateVoucher(Payment $payment, EntityManagerInterface $em): void
     {
-        $voucherContent = $this->renderView('payment/voucher.txt.twig', ['payment' => $payment]);
+        $client = $em->getRepository(Client::class)->findOneBy(['rut' => $payment->getRut()]);
+
+        $voucherContent = $this->renderView('payment/voucher.txt.twig', [
+            'payment' => $payment,
+            'client' => $client,
+        ]);
+
         $payment->setVoucherContent($voucherContent);
-
-        $projectDir = $this->getParameter('kernel.project_dir');
-        $voucherDir = $projectDir . self::VOUCHER_PATH;
-
-        if (!is_dir($voucherDir)) {
-            mkdir($voucherDir, 0777, true);
-        }
-
-        $filename = sprintf('/payment_%s_%s.txt', $payment->getId(), time());
-        file_put_contents($voucherDir . $filename, $voucherContent);
 
         $em->persist($payment);
         $em->flush();

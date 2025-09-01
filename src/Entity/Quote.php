@@ -65,12 +65,11 @@ class Quote
     #[ORM\JoinColumn(nullable: false)]
     private ?Contingency $contingency = null;
 
-    #[ORM\ManyToOne]
-    #[ORM\JoinColumn(nullable: true)]
-    private ?Device $device = null;
-
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $billingDate = null;
+
+    #[ORM\Column(type: Types::INTEGER)]
+    private ?int $publicId = null;
 
     public function __construct()
     {
@@ -276,6 +275,18 @@ class Quote
     public function setBillingDate(?\DateTimeInterface $billingDate): static
     {
         $this->billingDate = $billingDate;
+
+        return $this;
+    }
+
+    public function getPublicId(): ?int
+    {
+        return $this->publicId;
+    }
+
+    public function setPublicId(int $publicId): static
+    {
+        $this->publicId = $publicId;
 
         return $this;
     }

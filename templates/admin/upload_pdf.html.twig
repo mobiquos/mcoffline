@@ -1,0 +1,53 @@
+{% extends '@EasyAdmin/page/content.html.twig' %}
+
+{% block page_title %}Subir PDF{% endblock %}
+
+{% block page_content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Subir archivo PDF</h3>
+                    </div>
+                    <div class="card-body">
+                        {% for label, messages in app.flashes %}
+                            {% for message in messages %}
+                                <div class="alert alert-{{ label }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endfor %}
+
+                        <form method="post" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="pdf_file" class="form-label">Seleccionar archivo PDF</label>
+                                <input type="file" class="form-control" id="pdf_file" name="pdf_file" accept=".pdf,application/pdf" required>
+                                <div class="form-text">Solo se permiten archivos PDF. El archivo anterior será reemplazado.</div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Subir archivo</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">Documento PDF actual</h3>
+                    </div>
+                    <div class="card-body">
+                        {% if pdfExists %}
+                            <p class="text-success">Archivo PDF disponible</p>
+                            <a href="{{ path('admin_download_pdf') }}" class="btn btn-primary" target="_blank">
+                                <i class="fas fa-download"></i> Descargar PDF
+                            </a>
+                        {% else %}
+                            <p class="text-muted">No hay archivo PDF disponible</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}

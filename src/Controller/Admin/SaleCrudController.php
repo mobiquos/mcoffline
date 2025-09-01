@@ -5,6 +5,7 @@ namespace App\Controller\Admin;
 use App\Entity\Contingency;
 use App\Entity\Sale;
 use App\Entity\User;
+use App\Service\PrintVoucherService;
 use App\Service\QuoteService;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\QueryBuilder;
@@ -36,7 +37,8 @@ class SaleCrudController extends AbstractCrudController
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
-        private readonly QuoteService $quoteService
+        private readonly QuoteService $quoteService,
+        private readonly PrintVoucherService $printVoucherService
     ) {
     }
 
@@ -104,11 +106,16 @@ class SaleCrudController extends AbstractCrudController
         $showVoucherAction = Action::new('showVoucher', 'Ver Voucher', 'fa fa-file-text-o')
             ->linkToCrudAction('showVoucher');
 
+        $reprintVoucherAction = Action::new('reprintVoucher', 'Reimprimir Voucher', 'fa fa-print')
+            ->linkToCrudAction('reprintVoucher');
+
         return $actions
             ->add(Crud::PAGE_INDEX, $exportAction)
             ->add(Crud::PAGE_INDEX, $showVoucherAction)
+            ->add(Crud::PAGE_INDEX, $reprintVoucherAction)
             ->update(Crud::PAGE_INDEX, Action::EDIT, fn(Action $action) => $action->displayIf(fn($entity) => $entity->getCreatedAt()->format("Ymd") == (new \DateTime)->format("Ymd")))
             ->setPermission('showVoucher', User::ROLE_SUPER_ADMIN)
+            ->setPermission('reprintVoucher', User::ROLE_SUPER_ADMIN)
             ->remove(Crud::PAGE_INDEX, Action::DELETE)
             // ->remove(Crud::PAGE_INDEX, Action::EDIT)
             ->remove(Crud::PAGE_INDEX, Action::NEW)
@@ -153,6 +160,27 @@ class SaleCrudController extends AbstractCrudController
         return $this->render('admin/voucher.html.twig', [
             'voucher_content' => $sale->getVoucherContent(),
         ]);
+    }
+
+    #[AdminAction(routeName: 'reprint_voucher', routePath: '/{entityId}/reprint-voucher')]
+    public function reprintVoucher(AdminContext $context): Response
+    {
+        $sale = $context->getEntity()->getInstance();
+
+        try {
+            // Print the voucher using the service
+            $success = $this->printVoucherService->printSaleVoucher($sale);
+
+            if ($success) {
+                $this->addFlash('success', 'Voucher reimprimido exitosamente.');
+            } else {
+                $this->addFlash('danger', 'Error al reimprimir el voucher.');
+            }
+        } catch (\Exception $e) {
+            $this->addFlash('danger', 'Error al reimprimir el voucher: ' . $e->getMessage());
+        }
+
+        return $this->redirect($context->getReferrer() ?? $this->generateUrl('admin'));
     }
 
     public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void

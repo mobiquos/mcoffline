@@ -3,6 +3,8 @@
 namespace App\Entity;
 
 use App\Repository\SyncEventRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: SyncEventRepository::class)]
@@ -12,6 +14,10 @@ class SyncEvent
     const STATUS_INPROGRESS = 'in progress';
     const STATUS_SUCCESS = 'success';
     const STATUS_FAILED = 'failed';
+
+    const TYPE_PUSH = 'push'; // Location to admin
+    const TYPE_PULL = 'pull'; // Admin to location
+    const TYPE_LOAD = 'load'; // load client data
 
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -27,6 +33,9 @@ class SyncEvent
     #[ORM\Column]
     private ?string $status = self::STATUS_INPROGRESS;
 
+    #[ORM\Column(length: 10)]
+    private ?string $type = self::TYPE_PUSH;
+
     #[ORM\ManyToOne(inversedBy: 'syncEvents')]
     private ?Location $location = null;
 
@@ -34,6 +43,7 @@ class SyncEvent
     {
         $this->createdAt = new \DateTime;
     }
+
     public function getId(): ?int
     {
         return $this->id;
@@ -71,6 +81,18 @@ class SyncEvent
     public function setStatus(string $status): static
     {
         $this->status = $status;
+
+        return $this;
+    }
+
+    public function getType(): ?string
+    {
+        return $this->type;
+    }
+
+    public function setType(string $type): static
+    {
+        $this->type = $type;
 
         return $this;
     }

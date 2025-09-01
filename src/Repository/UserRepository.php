@@ -2,6 +2,7 @@
 
 namespace App\Repository;
 
+use App\Entity\Location;
 use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -33,6 +34,25 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->persist($user);
         $this->getEntityManager()
             ->flush();
+    }
+
+    /**
+     * Remove all sellers and cashiers for a specific location
+     *
+     * @param Location $location
+     * @return int
+     */
+    public function removeSellersAndCashiersByLocation(Location $location): int
+    {
+        return $this->createQueryBuilder('u')
+            ->delete()
+            ->where('u.location = :location')
+            ->andWhere('u.roles LIKE :sellerRole OR u.roles LIKE :cashierRole')
+            ->setParameter('location', $location)
+            ->setParameter('sellerRole', '%"' . User::ROLE_SELLER . '"%')
+            ->setParameter('cashierRole', '%"' . User::ROLE_CASHIER . '"%')
+            ->getQuery()
+            ->execute();
     }
 
     //    /**

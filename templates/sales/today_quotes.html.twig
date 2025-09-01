@@ -32,7 +32,7 @@
                         <tbody>
                             {% for quote in quotes %}
                                 <tr>
-                                    <td>{{ quote.id }}</td>
+                                    <td>{{ quote.publicId }}</td>
                                     <td>{{ quote.quoteDate|date('d/m/Y H:i:s') }}</td>
                                     <td>{{ quote.rut }}</td>
                                     <td>{{ quote.clientName|default('Cliente no encontrado') }}</td>

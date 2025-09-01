@@ -58,7 +58,7 @@ class QuoteCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         return [
-            IdField::new('id', 'ID Simulación'),
+            IdField::new('publicId', 'ID Simulación'),
             IdField::new('contingency.id', 'ID Contingencia'),
             TextField::new('contingency.location.code', 'Agencia'),
             TextField::new('rut', 'RUT cliente')->onlyOnForms(),
@@ -96,7 +96,7 @@ class QuoteCrudController extends AbstractCrudController
 
             foreach ($quotes as $q) {
                 fputcsv($handle, [
-                    $q->getId(),
+                    $q->getPublicId(),
                     $q->getContingency()->getId(),
                     $q->getLocationCode(),
                     $q->getQuoteDate()->format('d-m-Y'),

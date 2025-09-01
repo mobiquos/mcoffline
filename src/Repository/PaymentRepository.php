@@ -32,6 +32,25 @@ class PaymentRepository extends ServiceEntityRepository
         return $qb->getQuery()->getSingleResult();
     }
 
+    /**
+     * Get the next correlative ID for payments of the day
+     *
+     * @param \DateTimeInterface $date The date to get the correlative for
+     * @return int The next correlative ID
+     */
+    public function getNextCorrelativeId(\DateTimeInterface $date): int
+    {
+        $qb = $this->createQueryBuilder('p');
+        $qb->select('COUNT(p.id)')
+            ->where('DATE(p.createdAt) = :date')
+            ->setParameter('date', $date->format('Y-m-d'));
+
+        $count = (int) $qb->getQuery()->getSingleScalarResult();
+        
+        // Return the next correlative (count + 1)
+        return $count + 1;
+    }
+
 //    /**
 //     * @return Payment[] Returns an array of Payment objects
 //     */
