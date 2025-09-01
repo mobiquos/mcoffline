@@ -197,9 +197,9 @@ class DashboardController extends AbstractDashboardController
         /** @var UrlGeneratorInterface $urlGenerator2 */
         $urlGenerator2 = $this->container->get(UrlGeneratorInterface::class);
         $em = $this->container->get('doctrine');
-        $locationCode = $em->getRepository(SystemParameter::class)->find(SystemParameter::PARAM_LOCATION_CODE);
+        $locationCode = $em->getRepository(SystemParameter::class)->findByCode(SystemParameter::PARAM_LOCATION_CODE);
         $location = $em->getRepository(Location::class)->findOneBy(['code' => $locationCode]);
-        $systemVersion = $em->getRepository(SystemParameter::class)->find(SystemParameter::PARAM_VERSION_TYPE);
+        $systemVersion = $em->getRepository(SystemParameter::class)->findByCode(SystemParameter::PARAM_VERSION_TYPE);
 
         yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home')->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToCrud('Abrir/Cerrar Contingencia', 'fas fa-tool', Contingency::class)->setAction('openClose');
