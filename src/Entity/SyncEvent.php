@@ -24,6 +24,9 @@ class SyncEvent
     #[ORM\Column]
     private ?int $id = null;
 
+    #[ORM\Column(length: 36, unique: true)]
+    private ?string $syncId = null;
+
     #[ORM\Column]
     private ?\DateTime $createdAt = null;
 
@@ -39,14 +42,31 @@ class SyncEvent
     #[ORM\ManyToOne(inversedBy: 'syncEvents')]
     private ?Location $location = null;
 
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $comments = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime;
+        // Generate a unique sync ID
+        $this->syncId = uniqid('', true);
     }
 
     public function getId(): ?int
     {
         return $this->id;
+    }
+
+    public function getSyncId(): ?string
+    {
+        return $this->syncId;
+    }
+
+    public function setSyncId(string $syncId): static
+    {
+        $this->syncId = $syncId;
+
+        return $this;
     }
 
     public function getCreatedAt(): ?\DateTime
@@ -105,6 +125,18 @@ class SyncEvent
     public function setLocation(?Location $location): static
     {
         $this->location = $location;
+
+        return $this;
+    }
+
+    public function getComments(): ?string
+    {
+        return $this->comments;
+    }
+
+    public function setComments(?string $comments): static
+    {
+        $this->comments = $comments;
 
         return $this;
     }
