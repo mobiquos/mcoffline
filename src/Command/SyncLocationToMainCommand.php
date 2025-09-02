@@ -15,10 +15,10 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:sync-location-to-admin',
-    description: 'Synchronize sales and payments from location to admin system',
+    name: 'app:location:push-data',
+    description: 'Synchronize sales and payments from location to main system',
 )]
-class SyncLocationToAdminCommand extends Command
+class SyncLocationToMainCommand extends Command
 {
     public function __construct(
         private readonly LocationToAdminSyncService $locationToAdminSyncService,
@@ -78,7 +78,7 @@ class SyncLocationToAdminCommand extends Command
         try {
             // Determine which contingencies to sync
             $contingenciesToSync = [];
-            
+
             if ($contingencyId) {
                 // Sync specific contingency
                 $contingency = $this->entityManager->getRepository(Contingency::class)->find($contingencyId);
@@ -99,7 +99,7 @@ class SyncLocationToAdminCommand extends Command
                     'type' => SyncEvent::TYPE_PUSH,
                     'location' => $location
                 ], ['createdAt' => 'DESC']);
-                
+
                 $criteria = [];
                 if ($lastSuccessfulSync) {
                     $criteria['createdAt'] = $lastSuccessfulSync->getCreatedAt();
@@ -110,7 +110,7 @@ class SyncLocationToAdminCommand extends Command
                 } else {
                     $io->info('Syncing all contingencies (no previous successful sync found)');
                 }
-                
+
                 $contingenciesToSync = $this->findContingenciesToSync($criteria);
             }
 
@@ -128,44 +128,20 @@ class SyncLocationToAdminCommand extends Command
             $totalResults = [
                 'sales_synced' => 0,
                 'payments_synced' => 0,
+                'quotes_synced' => 0,
+                'contingencies_synced' => 0,
                 'errors' => []
             ];
 
-            // Sync each contingency or all together
-            if (count($contingenciesToSync) == 1) {
-                $contingency = $contingenciesToSync[0];
-                $io->info(sprintf(
-                    'Syncing contingency ID "%s" (created at: %s)',
-                    $contingency->getId(),
-                    $contingency->getCreatedAt()->format('Y-m-d H:i:s')
-                ));
-
-                // Initiate the synchronization process for this contingency
-                $results = $this->locationToAdminSyncService->syncToAdmin($location, $contingency);
-                
-                $totalResults['sales_synced'] += $results['sales_synced'];
-                $totalResults['payments_synced'] += $results['payments_synced'];
-                if (!empty($results['errors'])) {
-                    $totalResults['errors'] = array_merge($totalResults['errors'], $results['errors']);
-                }
-
-                if (!empty($results['errors'])) {
-                    $io->warning(sprintf(
-                        'Errors encountered while syncing contingency ID "%s":',
-                        $contingency->getId()
-                    ));
-                    foreach ($results['errors'] as $error) {
-                        $io->text('  - ' . $error);
-                    }
-                }
-            } else {
                 $io->info(sprintf('Syncing %d contingencies together', count($contingenciesToSync)));
-                
+
                 // Initiate the synchronization process for all contingencies
                 $results = $this->locationToAdminSyncService->syncMultipleContingenciesToAdmin($location, $contingenciesToSync);
-                
+
                 $totalResults['sales_synced'] += $results['sales_synced'];
                 $totalResults['payments_synced'] += $results['payments_synced'];
+                $totalResults['quotes_synced'] += $results['quotes_synced'];
+                $totalResults['contingencies_synced'] += $results['contingencies_synced'];
                 if (!empty($results['errors'])) {
                     $totalResults['errors'] = array_merge($totalResults['errors'], $results['errors']);
                 }
@@ -176,19 +152,22 @@ class SyncLocationToAdminCommand extends Command
                         $io->text('  - ' . $error);
                     }
                 }
-            }
 
             if (empty($totalResults['errors'])) {
                 $io->success(sprintf(
-                    'Synchronization completed successfully. Total sales synced: %d, Total payments synced: %d',
+                    'Synchronization completed successfully. Total sales synced: %d, Total payments synced: %d, Total quotes synced: %d, Total contingencies synced: %d',
                     $totalResults['sales_synced'],
-                    $totalResults['payments_synced']
+                    $totalResults['payments_synced'],
+                    $totalResults['quotes_synced'],
+                    $totalResults['contingencies_synced']
                 ));
             } else {
                 $io->warning(sprintf(
-                    'Synchronization completed with errors. Total sales synced: %d, Total payments synced: %d',
+                    'Synchronization completed with errors. Total sales synced: %d, Total payments synced: %d, Total quotes synced: %d, Total contingencies synced: %d',
                     $totalResults['sales_synced'],
-                    $totalResults['payments_synced']
+                    $totalResults['payments_synced'],
+                    $totalResults['quotes_synced'],
+                    $totalResults['contingencies_synced']
                 ));
 
                 $io->error(sprintf('Encountered %d errors during synchronization:', count($totalResults['errors'])));
@@ -215,14 +194,14 @@ class SyncLocationToAdminCommand extends Command
     private function findContingenciesToSync(array $criteria = []): array
     {
         $qb = $this->entityManager->getRepository(Contingency::class)->createQueryBuilder('c');
-        
+
         if (isset($criteria['createdAt'])) {
             $qb->andWhere('c.createdAt > :createdAt')
                ->setParameter('createdAt', $criteria['createdAt']);
         }
-        
+
         $qb->orderBy('c.createdAt', 'ASC');
-        
+
         return $qb->getQuery()->getResult();
     }
 }

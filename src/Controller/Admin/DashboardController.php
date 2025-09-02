@@ -202,8 +202,10 @@ class DashboardController extends AbstractDashboardController
         $systemVersion = $em->getRepository(SystemParameter::class)->findByCode(SystemParameter::PARAM_VERSION_TYPE);
 
         yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home')->setPermission('ROLE_ADMIN');
-        yield MenuItem::linkToCrud('Abrir/Cerrar Contingencia', 'fas fa-tool', Contingency::class)->setAction('openClose');
-        yield MenuItem::linkToUrl('Simuladores', 'fas fa-tool', $urlGenerator2->generate('home', [], UrlGeneratorInterface::ABSOLUTE_URL));
+        if ($systemVersion->getValue() == "location") {
+            yield MenuItem::linkToCrud('Abrir/Cerrar Contingencia', 'fas fa-tool', Contingency::class)->setAction('openClose');
+            yield MenuItem::linkToUrl('Simuladores', 'fas fa-tool', $urlGenerator2->generate('home', [], UrlGeneratorInterface::ABSOLUTE_URL));
+        }
 
         yield MenuItem::section("Detalle contingencias");
         if ($systemVersion->getValue() == "main") {
@@ -225,7 +227,9 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::section("Configuración")->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToCrud('Sincronizaciones', 'fas fa-users', SyncEvent::class)->setAction(Action::INDEX)->setPermission(User::ROLE_SUPER_ADMIN);
         yield MenuItem::linkToCrud('Usuarios', 'fas fa-users', User::class)->setAction(Action::INDEX)->setPermission('ROLE_ADMIN');
-        yield MenuItem::linkToCrud('Locales', 'fas fa-building', Location::class)->setPermission('ROLE_ADMIN');
+        if ($systemVersion->getValue() == "main") {
+            yield MenuItem::linkToCrud('Locales', 'fas fa-building', Location::class)->setPermission('ROLE_ADMIN');
+        }
         yield MenuItem::linkToCrud('Equipos', 'fas fa-device', Device::class)->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToRoute('Parámetros de sistema', 'fas fa-gears', 'admin_system_parameter_config')->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToRoute('Actualizar Manual', 'fas fa-file-pdf', 'admin_upload_pdf')->setPermission('ROLE_SUPER_ADMIN');

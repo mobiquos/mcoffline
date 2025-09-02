@@ -12,7 +12,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:process-sync-files',
+    name: 'app:location:sync-clients',
     description: 'Process uploaded sync files and update client data',
 )]
 class ProcessSyncFilesCommand extends Command

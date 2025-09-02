@@ -14,7 +14,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:sync-location',
+    name: 'app:main:sync-location',
     description: 'Initiate synchronization process between location and main instance',
 )]
 class SyncLocationCommand extends Command

@@ -6,10 +6,13 @@ use App\Entity\Contingency;
 use App\Entity\Location;
 use App\Entity\Sale;
 use App\Entity\Payment;
+use App\Entity\Quote;
 use App\Entity\SyncEvent;
 use App\Entity\SystemParameter;
 use App\Repository\SaleRepository;
 use App\Repository\PaymentRepository;
+use App\Repository\QuoteRepository;
+use App\Repository\ContingencyRepository;
 use App\Repository\SystemParameterRepository;
 use App\Repository\SyncEventRepository;
 use Doctrine\ORM\EntityManagerInterface;
@@ -26,6 +29,8 @@ class LocationToAdminSyncService
         private readonly EntityManagerInterface $em,
         private readonly SaleRepository $saleRepository,
         private readonly PaymentRepository $paymentRepository,
+        private readonly QuoteRepository $quoteRepository,
+        private readonly ContingencyRepository $contingencyRepository,
         private readonly SystemParameterRepository $systemParameterRepository,
         private readonly SyncEventRepository $syncEventRepository,
         private readonly UrlGeneratorInterface $urlGenerator
@@ -33,97 +38,7 @@ class LocationToAdminSyncService
     }
 
     /**
-     * Synchronize sales and payments from location to admin system
-     *
-     * @param Location $location The location to synchronize data from
-     * @param Contingency $contingency The contingency period to sync
-     * @param SyncEvent|null $existingSyncEvent An existing sync event to update (optional)
-     * @return array Results of the synchronization
-     */
-    public function syncToAdmin(Location $location, Contingency $contingency, ?SyncEvent $existingSyncEvent = null): array
-    {
-        // Create or use existing sync event
-        if ($existingSyncEvent) {
-            $syncEvent = $existingSyncEvent;
-            // Reset status if it was failed
-            if ($syncEvent->getStatus() === SyncEvent::STATUS_FAILED) {
-                $syncEvent->setStatus(SyncEvent::STATUS_INPROGRESS);
-                $this->em->flush();
-            }
-        } else {
-            // Create a new sync event
-            $syncEvent = new SyncEvent();
-            $syncEvent->setLocation($location);
-            $syncEvent->setStatus(SyncEvent::STATUS_INPROGRESS);
-            $syncEvent->setType(SyncEvent::TYPE_PUSH);
-
-            $this->em->persist($syncEvent);
-            $this->em->flush();
-        }
-
-        $results = [
-            'sales_synced' => 0,
-            'payments_synced' => 0,
-            'errors' => []
-        ];
-
-        try {
-            // Get admin server address from system parameters
-            $serverParam = $this->systemParameterRepository->findByCode(SystemParameter::PARAM_SERVER_ADDRESS);
-            if (!$serverParam) {
-                $results['errors'][] = 'Server address not configured in system parameters';
-                $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
-                $this->em->flush();
-                return $results;
-            }
-
-            $adminServerAddress = $serverParam->getValue();
-
-            // Create CSV files for sales and payments
-            $csvResults = $this->createCsvFiles($location, [$contingency]);
-            if (!empty($csvResults['errors'])) {
-                $results['errors'] = array_merge($results['errors'], $csvResults['errors']);
-                $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
-                $this->em->flush();
-                return $results;
-            }
-
-            // Upload CSV files to admin system
-            $uploadResults = $this->uploadCsvFiles($adminServerAddress, $csvResults['sales_file'], $csvResults['payments_file']);
-            $results['sales_synced'] = $uploadResults['sales_synced'];
-            $results['payments_synced'] = $uploadResults['payments_synced'];
-            if (!empty($uploadResults['errors'])) {
-                $results['errors'] = array_merge($results['errors'], $uploadResults['errors']);
-            }
-
-            // Update sync event status
-            if (empty($results['errors'])) {
-                $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
-            } else {
-                $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
-            }
-
-            $this->em->flush();
-
-            // Clean up temporary CSV files
-            if (file_exists($csvResults['sales_file'])) {
-                unlink($csvResults['sales_file']);
-            }
-            if (file_exists($csvResults['payments_file'])) {
-                unlink($csvResults['payments_file']);
-            }
-
-            return $results;
-        } catch (\Exception $e) {
-            $results['errors'][] = 'Synchronization failed: ' . $e->getMessage();
-            $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
-            $this->em->flush();
-            return $results;
-        }
-    }
-
-    /**
-     * Synchronize sales and payments from location to admin system for multiple contingencies
+     * Synchronize sales, payments, and quotes from location to admin system for multiple contingencies
      *
      * @param Location $location The location to synchronize data from
      * @param Contingency[] $contingencies The contingency periods to sync
@@ -143,6 +58,8 @@ class LocationToAdminSyncService
         $results = [
             'sales_synced' => 0,
             'payments_synced' => 0,
+            'quotes_synced' => 0,
+            'contingencies_synced' => 0,
             'errors' => []
         ];
 
@@ -158,7 +75,20 @@ class LocationToAdminSyncService
 
             $adminServerAddress = $serverParam->getValue();
 
-            // Create CSV files for sales and payments across all contingencies
+            // Push all contingencies directly (since they are few and with little data)
+            $syncEvent->setComments($syncEvent->getComments() . "\nInicio sincronizacion contingencias");
+            $contingencyResults = $this->pushContingencies($adminServerAddress, $syncEvent, $contingencies);
+            $results['contingencies_synced'] = $contingencyResults['count'];
+            if (!empty($contingencyResults['errors'])) {
+                $results['errors'] = array_merge($results['errors'], $contingencyResults['errors']);
+                $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
+                $this->em->flush();
+                return $results;
+            }
+            $syncEvent->setComments($syncEvent->getComments() . "\nTermino sincronizacion contingencias");
+
+            $syncEvent->setComments($syncEvent->getComments() . "\nInicio sincronizacion ventas y otros.");
+            // Create CSV files for sales, payments, and quotes across all contingencies
             $csvResults = $this->createCsvFiles($location, $contingencies);
             if (!empty($csvResults['errors'])) {
                 $results['errors'] = array_merge($results['errors'], $csvResults['errors']);
@@ -168,9 +98,10 @@ class LocationToAdminSyncService
             }
 
             // Upload CSV files to admin system
-            $uploadResults = $this->uploadCsvFiles($adminServerAddress, $csvResults['sales_file'], $csvResults['payments_file']);
+            $uploadResults = $this->uploadCsvFiles($syncEvent->getSyncId(), $adminServerAddress, $csvResults['sales_file'], $csvResults['payments_file']);
             $results['sales_synced'] = $uploadResults['sales_synced'];
             $results['payments_synced'] = $uploadResults['payments_synced'];
+            // $results['quotes_synced'] = $uploadResults['quotes_synced'];
             if (!empty($uploadResults['errors'])) {
                 $results['errors'] = array_merge($results['errors'], $uploadResults['errors']);
             }
@@ -182,6 +113,7 @@ class LocationToAdminSyncService
                 $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
             }
 
+            $syncEvent->setComments($syncEvent->getComments() . "\nTermino sincronizacion ventas y otros.");
             $this->em->flush();
 
             // Clean up temporary CSV files
@@ -191,6 +123,9 @@ class LocationToAdminSyncService
             if (file_exists($csvResults['payments_file'])) {
                 unlink($csvResults['payments_file']);
             }
+            // if (file_exists($csvResults['quotes_file'])) {
+            //     unlink($csvResults['quotes_file']);
+            // }
 
             return $results;
         } catch (\Exception $e) {
@@ -202,7 +137,7 @@ class LocationToAdminSyncService
     }
 
     /**
-     * Create CSV files for sales and payments data across multiple contingencies
+     * Create CSV files for sales, payments, quotes, and contingencies data across multiple contingencies
      *
      * @param Location $location The location to synchronize data from
      * @param Contingency[] $contingencies The contingency periods to sync
@@ -213,6 +148,8 @@ class LocationToAdminSyncService
         $results = [
             'sales_file' => null,
             'payments_file' => null,
+            'quotes_file' => null,
+            'contingencies_file' => null,
             'errors' => []
         ];
 
@@ -240,6 +177,24 @@ class LocationToAdminSyncService
                 return $results;
             }
             $results['payments_file'] = $paymentsFile;
+
+            // Create quotes CSV file
+            // $quotesFile = $tempDir . '/quotes_' . $location->getId() . '_' . time() . '.csv';
+            // $quotesResults = $this->createQuotesCsv($quotesFile, $contingencies);
+            // if (!empty($quotesResults['errors'])) {
+            //     $results['errors'] = array_merge($results['errors'], $quotesResults['errors']);
+            //     return $results;
+            // }
+            // $results['quotes_file'] = $quotesFile;
+
+            // Create contingencies CSV file
+            // $contingenciesFile = $tempDir . '/contingencies_' . $location->getId() . '_' . time() . '.csv';
+            // $contingenciesResults = $this->createContingenciesCsv($contingenciesFile, $contingencies);
+            // if (!empty($contingenciesResults['errors'])) {
+            //     $results['errors'] = array_merge($results['errors'], $contingenciesResults['errors']);
+            //     return $results;
+            // }
+            // $results['contingencies_file'] = $contingenciesFile;
 
             return $results;
         } catch (\Exception $e) {
@@ -431,29 +386,266 @@ class LocationToAdminSyncService
     }
 
     /**
+     * Create a CSV file with quotes data for multiple contingencies
+     *
+     * @param string $filePath The path to the CSV file
+     * @param Contingency[] $contingencies The contingency periods to sync
+     * @return array Results of the CSV creation
+     */
+    private function createQuotesCsv(string $filePath, array $contingencies): array
+    {
+        $results = [
+            'count' => 0,
+            'errors' => []
+        ];
+
+        try {
+            $file = fopen($filePath, 'w');
+            if (!$file) {
+                $results['errors'][] = 'Failed to create quotes CSV file';
+                return $results;
+            }
+
+            // Write CSV header
+            $headers = [
+                'id', 'rut', 'amount', 'paymentMethod', 'tbkNumber', 'locationCode',
+                'quoteDate', 'createdById', 'downPayment', 'deferredPayment',
+                'installments', 'interest', 'installmentAmount', 'totalAmount',
+                'contingencyId', 'billingDate', 'publicId'
+            ];
+            fputcsv($file, $headers);
+
+            // Process each contingency
+            foreach ($contingencies as $contingency) {
+                // Get all quotes for the contingency period
+                $quotes = $this->quoteRepository->findBy(['contingency' => $contingency]);
+
+                // Process quotes in batches
+                $batchCount = ceil(count($quotes) / self::BATCH_SIZE);
+
+                for ($i = 0; $i < $batchCount; $i++) {
+                    $batch = array_slice($quotes, $i * self::BATCH_SIZE, self::BATCH_SIZE);
+
+                    foreach ($batch as $quote) {
+                        try {
+                            // Prepare quote data for CSV
+                            $quoteData = $this->prepareQuoteData($quote);
+
+                            // Flatten the data for CSV
+                            $csvRow = [
+                                $quoteData['id'],
+                                $quoteData['rut'],
+                                $quoteData['amount'],
+                                $quoteData['paymentMethod'],
+                                $quoteData['tbkNumber'],
+                                $quoteData['locationCode'],
+                                $quoteData['quoteDate'],
+                                $quoteData['createdById'],
+                                $quoteData['downPayment'],
+                                $quoteData['deferredPayment'],
+                                $quoteData['installments'],
+                                $quoteData['interest'],
+                                $quoteData['installmentAmount'],
+                                $quoteData['totalAmount'],
+                                $quoteData['contingencyId'],
+                                $quoteData['billingDate'],
+                                $quoteData['publicId']
+                            ];
+
+                            fputcsv($file, $csvRow);
+                            $results['count']++;
+                        } catch (\Exception $e) {
+                            $results['errors'][] = sprintf(
+                                'Error processing quote ID %d for CSV: %s',
+                                $quote->getId(),
+                                $e->getMessage()
+                            );
+                        }
+                    }
+
+                    // Clear the entity manager to free memory
+                    $this->em->clear();
+                }
+            }
+
+            fclose($file);
+            return $results;
+        } catch (\Exception $e) {
+            $results['errors'][] = 'Failed to create quotes CSV: ' . $e->getMessage();
+            return $results;
+        }
+    }
+
+    /**
+     * Create a CSV file with contingencies data
+     *
+     * @param string $filePath The path to the CSV file
+     * @param Contingency[] $contingencies The contingency periods to sync
+     * @return array Results of the CSV creation
+     */
+    private function createContingenciesCsv(string $filePath, array $contingencies): array
+    {
+        $results = [
+            'count' => 0,
+            'errors' => []
+        ];
+
+        try {
+            $file = fopen($filePath, 'w');
+            if (!$file) {
+                $results['errors'][] = 'Failed to create contingencies CSV file';
+                return $results;
+            }
+
+            // Write CSV header
+            $headers = [
+                'id', 'locationId', 'locationCode', 'startedAt', 'endedAt',
+                'startedById', 'startedByName', 'comment'
+            ];
+            fputcsv($file, $headers);
+
+            // Process each contingency
+            foreach ($contingencies as $contingency) {
+                try {
+                    // Prepare contingency data for CSV
+                    $contingencyData = $this->prepareContingencyData($contingency);
+
+                    // Flatten the data for CSV
+                    $csvRow = [
+                        $contingencyData['id'],
+                        $contingencyData['locationId'],
+                        $contingencyData['locationCode'],
+                        $contingencyData['startedAt'],
+                        $contingencyData['endedAt'],
+                        $contingencyData['startedById'],
+                        $contingencyData['startedByName'],
+                        $contingencyData['comment']
+                    ];
+
+                    fputcsv($file, $csvRow);
+                    $results['count']++;
+                } catch (\Exception $e) {
+                    $results['errors'][] = sprintf(
+                        'Error processing contingency ID %s for CSV: %s',
+                        $contingency->getId(),
+                        $e->getMessage()
+                    );
+                }
+            }
+
+            fclose($file);
+            return $results;
+        } catch (\Exception $e) {
+            $results['errors'][] = 'Failed to create contingencies CSV: ' . $e->getMessage();
+            return $results;
+        }
+    }
+
+    /**
+     * Push multiple contingencies to the admin system
+     *
+     * @param string $adminServerAddress The admin server address
+     * @param Contingency[] $contingencies The contingencies to push
+     * @return array Results of the push operation
+     */
+    private function pushContingencies(string $adminServerAddress, SyncEvent $syncEvent, array $contingencies): array
+    {
+        $results = [
+            'count' => 0,
+            'errors' => []
+        ];
+
+        // If no contingencies, return early
+        if (empty($contingencies)) {
+            return $results;
+        }
+
+        try {
+            // Prepare all contingencies data
+            $allContingenciesData = [];
+            foreach ($contingencies as $contingency) {
+                $allContingenciesData[] = $this->prepareContingencyData($contingency);
+            }
+
+            // Send all contingencies data in a single request
+            $url = $adminServerAddress . $this->urlGenerator->generate('app_sync_push_contingency', [], UrlGeneratorInterface::ABSOLUTE_PATH);
+            $response = $this->httpClient->request('POST', $url, [
+                'json' => [
+                    'contingencies' => $allContingenciesData,
+                    'locationCode' => current($allContingenciesData)['locationCode'],
+                    'syncId' => $syncEvent->getSyncId(),
+                ]
+            ]);
+
+            // Check if the request was successful
+            if ($response->getStatusCode() === 200 || $response->getStatusCode() === 201) {
+                $results['count'] = count($contingencies);
+            } else {
+                $results['errors'][] = sprintf(
+                    'Failed to push contingencies: HTTP %d - %s',
+                    $response->getStatusCode(),
+                    $response->getContent(false)
+                );
+            }
+        } catch (\Exception $e) {
+            $results['errors'][] = sprintf(
+                'Error pushing contingencies: %s',
+                $e->getMessage()
+            );
+        }
+
+        return $results;
+    }
+
+    /**
      * Upload CSV files to the admin system
      *
      * @param string $adminServerAddress The admin server address
      * @param string $salesFile The path to the sales CSV file
      * @param string $paymentsFile The path to the payments CSV file
+     * @param string $quotesFile The path to the quotes CSV file
      * @return array Results of the upload
      */
-    private function uploadCsvFiles(string $adminServerAddress, string $salesFile, string $paymentsFile): array
+    private function uploadCsvFiles(string $adminServerAddress, string $syncId, string $salesFile, string $paymentsFile, string $quotesFile): array
     {
         $results = [
             'sales_synced' => 0,
             'payments_synced' => 0,
+            'quotes_synced' => 0,
+            'contingencies_synced' => 0,
             'errors' => []
         ];
 
         try {
+            // Upload quotes CSV file
+            if (file_exists($quotesFile)) {
+                $url = $adminServerAddress . $this->urlGenerator->generate('app_sync_push_quotes_csv', [], UrlGeneratorInterface::ABSOLUTE_PATH);
+                $response = $this->httpClient->request('POST', $url, [
+                    'body' => [
+                        'file' => fopen($quotesFile, 'r'),
+                    ]
+                ]);
+
+                if ($response->getStatusCode() === 200 || $response->getStatusCode() === 201) {
+                    $responseData = json_decode($response->getContent(), true);
+                    $results['quotes_synced'] = $responseData['count'] ?? 0;
+                } else {
+                    $results['errors'][] = sprintf(
+                        'Failed to upload quotes CSV: HTTP %d - %s',
+                        $response->getStatusCode(),
+                        $response->getContent(false)
+                    );
+                }
+            }
+
             // Upload sales CSV file
             if (file_exists($salesFile)) {
                 $url = $adminServerAddress . $this->urlGenerator->generate('app_sync_push_sales_csv', [], UrlGeneratorInterface::ABSOLUTE_PATH);
                 $response = $this->httpClient->request('POST', $url, [
                     'body' => [
-                        'file' => fopen($salesFile, 'r'),
-                    ]
+                        'syncId' => $syncId,
+                        'file' => fopen($salesFile, 'r', ),
+                    ],
                 ]);
 
                 if ($response->getStatusCode() === 200 || $response->getStatusCode() === 201) {
@@ -515,7 +707,6 @@ class LocationToAdminSyncService
             'clientFullName' => $client ? $client->getFullName() : null,
             'locationCode' => $quote ? $quote->getLocationCode() : null,
             'quote' => $quote ? [
-                'id' => $quote->getId(),
                 'amount' => $quote->getAmount(),
                 'paymentMethod' => $quote->getPaymentMethod(),
                 'tbkNumber' => $quote->getTbkNumber(),
@@ -558,6 +749,26 @@ class LocationToAdminSyncService
             'createdById' => $payment->getCreatedBy() ? $payment->getCreatedBy()->getId() : null,
             'deviceId' => $payment->getDevice() ? $payment->getDevice()->getId() : null,
             'contingencyId' => $payment->getContingency() ? $payment->getContingency()->getId() : null
+        ];
+    }
+
+    /**
+     * Prepare contingency data for synchronization
+     *
+     * @param Contingency $contingency The contingency entity
+     * @return array The prepared data
+     */
+    private function prepareContingencyData(Contingency $contingency): array
+    {
+        return [
+            'id' => $contingency->getId(),
+            'locationId' => $contingency->getLocation() ? $contingency->getLocation()->getId() : null,
+            'locationCode' => $contingency->getLocationCode(),
+            'startedAt' => $contingency->getStartedAt()->format('Y-m-d H:i:s'),
+            'endedAt' => $contingency->getEndedAt() ? $contingency->getEndedAt()->format('Y-m-d H:i:s') : null,
+            'startedById' => $contingency->getStartedBy() ? $contingency->getStartedBy()->getId() : null,
+            'startedByName' => $contingency->getStartedByName(),
+            'comment' => $contingency->getComment()
         ];
     }
 }

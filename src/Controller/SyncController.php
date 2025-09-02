@@ -147,7 +147,7 @@ class SyncController extends AbstractController
             }
 
             // Validate file type
-            if ($uploadedFile->getMimeType() !== 'text/csv' && $uploadedFile->getExtension() !== 'csv') {
+            if ($uploadedFile->getExtension() !== 'csv') {
                 return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
             }
 
@@ -193,7 +193,7 @@ class SyncController extends AbstractController
             }
 
             // Validate file type
-            if ($uploadedFile->getMimeType() !== 'text/csv' && $uploadedFile->getExtension() !== 'csv') {
+            if ($uploadedFile->getExtension() !== 'csv') {
                 return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
             }
 
@@ -239,7 +239,7 @@ class SyncController extends AbstractController
             }
 
             // Validate file type
-            if ($uploadedFile->getMimeType() !== 'text/csv' && $uploadedFile->getExtension() !== 'csv') {
+            if ($uploadedFile->getExtension() !== 'csv') {
                 return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
             }
 
