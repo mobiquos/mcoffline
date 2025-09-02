@@ -606,7 +606,7 @@ class LocationToAdminSyncService
      * @param string $quotesFile The path to the quotes CSV file
      * @return array Results of the upload
      */
-    private function uploadCsvFiles(string $adminServerAddress, string $syncId, string $salesFile, string $paymentsFile, string $quotesFile): array
+    private function uploadCsvFiles(string $syncId, string $adminServerAddress, string $salesFile, string $paymentsFile): array
     {
         $results = [
             'sales_synced' => 0,
@@ -617,27 +617,6 @@ class LocationToAdminSyncService
         ];
 
         try {
-            // Upload quotes CSV file
-            if (file_exists($quotesFile)) {
-                $url = $adminServerAddress . $this->urlGenerator->generate('app_sync_push_quotes_csv', [], UrlGeneratorInterface::ABSOLUTE_PATH);
-                $response = $this->httpClient->request('POST', $url, [
-                    'body' => [
-                        'file' => fopen($quotesFile, 'r'),
-                    ]
-                ]);
-
-                if ($response->getStatusCode() === 200 || $response->getStatusCode() === 201) {
-                    $responseData = json_decode($response->getContent(), true);
-                    $results['quotes_synced'] = $responseData['count'] ?? 0;
-                } else {
-                    $results['errors'][] = sprintf(
-                        'Failed to upload quotes CSV: HTTP %d - %s',
-                        $response->getStatusCode(),
-                        $response->getContent(false)
-                    );
-                }
-            }
-
             // Upload sales CSV file
             if (file_exists($salesFile)) {
                 $url = $adminServerAddress . $this->urlGenerator->generate('app_sync_push_sales_csv', [], UrlGeneratorInterface::ABSOLUTE_PATH);

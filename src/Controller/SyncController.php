@@ -147,9 +147,9 @@ class SyncController extends AbstractController
             }
 
             // Validate file type
-            if ($uploadedFile->getExtension() !== 'csv') {
-                return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
-            }
+            // if ($uploadedFile->getExtension() !== 'csv') {
+            //     return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
+            // }
 
             // Move file to a temporary location
             $tempDir = sys_get_temp_dir() . '/pending_sync';
@@ -193,9 +193,9 @@ class SyncController extends AbstractController
             }
 
             // Validate file type
-            if ($uploadedFile->getExtension() !== 'csv') {
-                return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
-            }
+            // if ($uploadedFile->getExtension() !== 'csv') {
+            //     return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
+            // }
 
             // Move file to a temporary location
             $tempDir = sys_get_temp_dir() . '/pending_sync';
@@ -239,9 +239,9 @@ class SyncController extends AbstractController
             }
 
             // Validate file type
-            if ($uploadedFile->getExtension() !== 'csv') {
-                return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
-            }
+            // if ($uploadedFile->getExtension() !== 'csv') {
+            //     return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
+            // }
 
             // Move file to a temporary location
             $tempDir = sys_get_temp_dir() . '/pending_sync';
