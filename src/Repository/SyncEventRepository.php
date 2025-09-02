@@ -16,6 +16,18 @@ class SyncEventRepository extends ServiceEntityRepository
         parent::__construct($registry, SyncEvent::class);
     }
 
+    public function findOneBySyncId(string $syncId): ?SyncEvent
+    {
+        return $this->createQueryBuilder('s')
+            ->andWhere('s.syncId = :id')
+            ->setParameter('id', $syncId)
+            ->orderBy('s.createdAt', 'DESC')
+            ->setMaxResults(1)
+            ->getQuery()
+            ->getOneOrNullResult()
+        ;
+    }
+
     public function findLastSuccessful(): ?SyncEvent
     {
         return $this->createQueryBuilder('s')
