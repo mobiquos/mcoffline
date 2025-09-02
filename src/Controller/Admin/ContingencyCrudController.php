@@ -192,11 +192,7 @@ class ContingencyCrudController extends AbstractCrudController
 
     public function configureActions(Actions $actions): Actions
     {
-        $reopen = Action::new('reopen', 'Reabrir', 'fa fa-door-open')
-            ->linkToCrudAction('reopenContingency')
-            ->displayIf(static function ($entity) {
-                return $entity->getEndedAt() !== null;
-            });
+        $systemVersion = $this->container->get('doctrine')->getRepository(SystemParameter::class)->findByCode(SystemParameter::PARAM_VERSION_TYPE);
 
         $exportSales = Action::new('export_sales', 'Exportar Ventas', 'fa fa-file-csv')
             ->linkToCrudAction('exportSales');
@@ -208,8 +204,15 @@ class ContingencyCrudController extends AbstractCrudController
             ->linkToCrudAction('exportIndex')
             ->createAsGlobalAction();
 
+        if ($systemVersion->getValue() == "location") {
+            $reopen = Action::new('reopen', 'Reabrir', 'fa fa-door-open')
+                ->linkToCrudAction('reopenContingency')
+                ->displayIf(static function ($entity) {
+                    return $entity->getEndedAt() !== null;
+                });
+            $actions->add(Crud::PAGE_INDEX, $reopen);
+        }
         return $actions->remove(Crud::PAGE_NEW, Action::SAVE_AND_ADD_ANOTHER)
-            ->add(Crud::PAGE_INDEX, $reopen)
             ->add(Crud::PAGE_INDEX, $exportSales)
             ->add(Crud::PAGE_INDEX, $exportPayments)
             ->add(Crud::PAGE_INDEX, $exportIndex)

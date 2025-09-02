@@ -201,10 +201,11 @@ class DashboardController extends AbstractDashboardController
         $location = $em->getRepository(Location::class)->findOneBy(['code' => $locationCode]);
         $systemVersion = $em->getRepository(SystemParameter::class)->findByCode(SystemParameter::PARAM_VERSION_TYPE);
 
-        yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home')->setPermission('ROLE_ADMIN');
         if ($systemVersion->getValue() == "location") {
-            yield MenuItem::linkToCrud('Abrir/Cerrar Contingencia', 'fas fa-tool', Contingency::class)->setAction('openClose');
-            yield MenuItem::linkToUrl('Simuladores', 'fas fa-tool', $urlGenerator2->generate('home', [], UrlGeneratorInterface::ABSOLUTE_URL));
+            yield MenuItem::linkToCrud('Abrir/Cerrar Contingencia', 'fas fa-bell', Contingency::class)->setAction('openClose');
+            yield MenuItem::linkToUrl('Simuladores', 'fas fa-cash-register', $urlGenerator2->generate('home', [], UrlGeneratorInterface::ABSOLUTE_URL));
+        } else {
+            yield MenuItem::linkToDashboard('Dashboard', 'fa fa-home')->setPermission('ROLE_ADMIN');
         }
 
         yield MenuItem::section("Detalle contingencias");
@@ -212,7 +213,7 @@ class DashboardController extends AbstractDashboardController
             yield MenuItem::linkToCrud('Ventas Multicentro', 'fas fa-dollar', Sale::class);
             yield MenuItem::linkToCrud('Pagos Multicentro', 'fas fa-money-bill', Payment::class);
         } else {
-            yield MenuItem::linkToCrud('Simulaciones de Crédito', 'fas fa-dollar', Quote::class)->setPermission('ROLE_ADMIN');
+            yield MenuItem::linkToCrud('Simulaciones de Crédito', 'fas fa-file', Quote::class)->setPermission('ROLE_ADMIN');
             yield MenuItem::linkToCrud('Ventas', 'fas fa-dollar', Sale::class);
             yield MenuItem::linkToCrud('Pagos', 'fas fa-money-bill', Payment::class);
         }
@@ -225,12 +226,12 @@ class DashboardController extends AbstractDashboardController
         yield MenuItem::linkToCrud('Histórico Contingencia', 'fas fa-archive', Contingency::class)->setPermission('ROLE_ADMIN');
 
         yield MenuItem::section("Configuración")->setPermission('ROLE_ADMIN');
-        yield MenuItem::linkToCrud('Sincronizaciones', 'fas fa-users', SyncEvent::class)->setAction(Action::INDEX)->setPermission(User::ROLE_SUPER_ADMIN);
+        yield MenuItem::linkToCrud('Sincronizaciones', 'fas fa-sync', SyncEvent::class)->setAction(Action::INDEX)->setPermission(User::ROLE_SUPER_ADMIN);
         yield MenuItem::linkToCrud('Usuarios', 'fas fa-users', User::class)->setAction(Action::INDEX)->setPermission('ROLE_ADMIN');
         if ($systemVersion->getValue() == "main") {
             yield MenuItem::linkToCrud('Locales', 'fas fa-building', Location::class)->setPermission('ROLE_ADMIN');
         }
-        yield MenuItem::linkToCrud('Equipos', 'fas fa-device', Device::class)->setPermission('ROLE_ADMIN');
+        yield MenuItem::linkToCrud('Equipos', 'fas fa-desktop', Device::class)->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToRoute('Parámetros de sistema', 'fas fa-gears', 'admin_system_parameter_config')->setPermission('ROLE_ADMIN');
         yield MenuItem::linkToRoute('Actualizar Manual', 'fas fa-file-pdf', 'admin_upload_pdf')->setPermission('ROLE_SUPER_ADMIN');
     }
