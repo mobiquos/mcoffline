@@ -22,6 +22,7 @@ use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextEditorField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
+use EasyCorp\Bundle\EasyAdminBundle\Field\TextareaField;
 use EasyCorp\Bundle\EasyAdminBundle\Router\AdminUrlGenerator;
 use Exception;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -53,11 +54,13 @@ class SyncEventCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         return [
+            TextField::new('syncId', 'ID'),
             AssociationField::new('location', 'Local'),
             DateTimeField::new('createdAt', 'Fecha'),
             AssociationField::new('createdBy', 'Iniciada por'),
             TextField::new('status', 'Estado')
                 ->setTemplatePath('admin/field/sync_status.html.twig'),
+            TextareaField::new('comments', 'Comentarios'),
         ];
     }
 
