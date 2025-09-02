@@ -300,8 +300,24 @@ class SyncController extends AbstractController
                 return $this->json(['error' => 'Invalid data format'], 400);
             }
 
+            if (isset($requestData['syncId'])) {
+                $syncId = $requestData['syncId'];
+                $syncEvent = $this->entityManager->getRepository(SyncEvent::class)->findOneBySyncId($syncId);
+            } else {
+                return $this->json(['error' => 'Invalid data format'], 400);
+            }
+
+            if (!$syncEvent) {
+                $syncEvent = new SyncEvent();
+                $syncEvent->setSyncId($syncId);
+                $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
+                $syncEvent->setType(SyncEvent::TYPE_PUSH);
+                $syncEvent->setLocation($requestLocation);
+                $syncEvent->setComments($syncEvent->getComments() . "\nInicio sincronizacion contingencias");
+                $this->entityManager->flush();
+            }
+
             $processedContingencies = [];
-            $syncEvents = [];
 
             foreach ($contingenciesData as $contingencyData) {
                 // Check if contingency already exists
@@ -348,14 +364,10 @@ class SyncController extends AbstractController
                 $processedContingencies[] = $contingency->getId();
             }
 
-            // Create a pending sync event
-            $syncEvent = new SyncEvent();
-            $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
-            $syncEvent->setType(SyncEvent::TYPE_PUSH);
-            $syncEvent->setLocation($requestLocation);
             // Location will be determined when processing the data
 
             $this->entityManager->persist($syncEvent);
+            $syncEvent->setComments($syncEvent->getComments() . "\nTermino sincronizacion contingencias");
             $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
             $this->entityManager->flush();
 
