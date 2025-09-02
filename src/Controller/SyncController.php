@@ -324,7 +324,7 @@ class SyncController extends AbstractController
 
                 // Set location if provided
                 if (!empty($contingencyData['locationId'])) {
-                    $location = $this->entityManager->getRepository('App\Entity\Location')->find($contingencyData['locationId']);
+                    $location = $this->entityManager->getRepository('App\Entity\Location')->findByCode($contingencyData['locationCode']);
                     if ($location) {
                         $contingency->setLocation($location);
                     }
