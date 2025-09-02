@@ -15,7 +15,7 @@ class InterestRateListType extends AbstractType
     {
         $builder
             ->add('first_rate', TextType::class, [
-                'label' => 'Primera Tasa',
+                'label' => '1 Cuota',
                 'attr' => [
                     'class' => 'form-control',
                     'placeholder' => 'Ej: 1.2'
@@ -23,7 +23,7 @@ class InterestRateListType extends AbstractType
                 'required' => false
             ])
             ->add('second_rate', TextType::class, [
-                'label' => 'Segunda Tasa',
+                'label' => '2 Cuotas',
                 'attr' => [
                     'class' => 'form-control',
                     'placeholder' => 'Ej: 1.3'
@@ -31,7 +31,7 @@ class InterestRateListType extends AbstractType
                 'required' => false
             ])
             ->add('other_rates', TextType::class, [
-                'label' => 'Otras Tasas (separadas por coma)',
+                'label' => '3 a N cuotas',
                 'attr' => [
                     'class' => 'form-control',
                     'placeholder' => 'Ej: 1.4'

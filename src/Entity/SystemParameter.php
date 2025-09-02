@@ -103,7 +103,7 @@ class SystemParameter
         ],
         self::PARAM_INTERESTS => [
             'name' => "Intereses",
-            'description' => "Ingresar un listado de intereses donde cada item corresponde a los intereses del mes. 3.7, 3.7, 4.1, 4.1, etc... significa que de 1 a 2 meses los intereses son 3,7% y de 3 a 4 meses son 4.1%.",
+            'description' => "Especificar la tasa de intereses aplicada durante las simulaciones.",
             'formType' => InterestRateListType::class,
             'defaultValue' => "3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7,3.7",
         ],
