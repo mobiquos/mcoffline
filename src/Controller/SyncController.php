@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Location;
 use App\Entity\SyncEvent;
 use App\Repository\ClientRepository;
 use App\Repository\LocationRepository;
@@ -288,9 +289,13 @@ class SyncController extends AbstractController
             if (isset($requestData['contingencies']) && is_array($requestData['contingencies'])) {
                 // Multiple contingencies
                 $contingenciesData = $requestData['contingencies'];
-            } else if (isset($requestData['id'])) {
-                // Single contingency (backward compatibility)
-                $contingenciesData = [$requestData];
+            } else {
+                return $this->json(['error' => 'Invalid data format'], 400);
+            }
+
+            if (isset($requestData['locationCode'])) {
+                $locationCode = $requestData['locationCode'];
+                $requestLocation = $this->entityManager->getRepository(Location::class)->findByCode($locationCode);
             } else {
                 return $this->json(['error' => 'Invalid data format'], 400);
             }
@@ -347,18 +352,16 @@ class SyncController extends AbstractController
             $syncEvent = new SyncEvent();
             $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
             $syncEvent->setType(SyncEvent::TYPE_PUSH);
+            $syncEvent->setLocation($requestLocation);
             // Location will be determined when processing the data
 
             $this->entityManager->persist($syncEvent);
-            $syncEvents[] = $syncEvent->getId();
-
             $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
             $this->entityManager->flush();
 
             return $this->json([
                 'message' => sprintf('%d contingency(ies) data received and saved successfully', count($processedContingencies)),
                 'contingency_ids' => $processedContingencies,
-                'sync_event_ids' => $syncEvents
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Failed to process contingency data: ' . $e->getMessage()], 500);
