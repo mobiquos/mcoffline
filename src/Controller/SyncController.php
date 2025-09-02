@@ -277,53 +277,71 @@ class SyncController extends AbstractController
     {
         try {
             // Handle contingency data push
-            $contingencyData = json_decode($request->getContent(), true);
+            $requestData = json_decode($request->getContent(), true);
 
-            if (!$contingencyData) {
-                return $this->json(['error' => 'No contingency data provided'], 400);
+            if (!$requestData) {
+                return $this->json(['error' => 'No data provided'], 400);
             }
 
-            // Check if contingency already exists
-            $existingContingency = $this->entityManager->getRepository('App\Entity\Contingency')->find($contingencyData['id']);
-
-            if ($existingContingency) {
-                // Update existing contingency
-                $contingency = $existingContingency;
+            // Get contingencies data (could be single or multiple)
+            $contingenciesData = [];
+            if (isset($requestData['contingencies']) && is_array($requestData['contingencies'])) {
+                // Multiple contingencies
+                $contingenciesData = $requestData['contingencies'];
+            } else if (isset($requestData['id'])) {
+                // Single contingency (backward compatibility)
+                $contingenciesData = [$requestData];
             } else {
-                // Create new contingency
-                $contingency = new \App\Entity\Contingency();
-                $contingency->setId($contingencyData['id']);
+                return $this->json(['error' => 'Invalid data format'], 400);
             }
 
-            // Set contingency properties
-            $contingency->setLocationCode($contingencyData['locationCode']);
-            $contingency->setStartedAt(new \DateTime($contingencyData['startedAt']));
+            $processedContingencies = [];
+            $syncEvents = [];
 
-            if (!empty($contingencyData['endedAt'])) {
-                $contingency->setEndedAt(new \DateTime($contingencyData['endedAt']));
-            }
+            foreach ($contingenciesData as $contingencyData) {
+                // Check if contingency already exists
+                $existingContingency = $this->entityManager->getRepository('App\Entity\Contingency')->find($contingencyData['id']);
 
-            $contingency->setStartedByName($contingencyData['startedByName']);
-            $contingency->setComment($contingencyData['comment'] ?? null);
-
-            // Set location if provided
-            if (!empty($contingencyData['locationId'])) {
-                $location = $this->entityManager->getRepository('App\Entity\Location')->find($contingencyData['locationId']);
-                if ($location) {
-                    $contingency->setLocation($location);
+                if ($existingContingency) {
+                    // Update existing contingency
+                    $contingency = $existingContingency;
+                } else {
+                    // Create new contingency
+                    $contingency = new \App\Entity\Contingency();
+                    $contingency->setId($contingencyData['id']);
                 }
-            }
 
-            // Set started by user if provided
-            if (!empty($contingencyData['startedById'])) {
-                $user = $this->entityManager->getRepository('App\Entity\User')->find($contingencyData['startedById']);
-                if ($user) {
-                    $contingency->setStartedBy($user);
+                // Set contingency properties
+                $contingency->setLocationCode($contingencyData['locationCode']);
+                $contingency->setStartedAt(new \DateTime($contingencyData['startedAt']));
+
+                if (!empty($contingencyData['endedAt'])) {
+                    $contingency->setEndedAt(new \DateTime($contingencyData['endedAt']));
                 }
-            }
 
-            // Persist contingency
-            $this->entityManager->persist($contingency);
+                $contingency->setStartedByName($contingencyData['startedByName']);
+                $contingency->setComment($contingencyData['comment'] ?? null);
+
+                // Set location if provided
+                if (!empty($contingencyData['locationId'])) {
+                    $location = $this->entityManager->getRepository('App\Entity\Location')->find($contingencyData['locationId']);
+                    if ($location) {
+                        $contingency->setLocation($location);
+                    }
+                }
+
+                // Set started by user if provided
+                if (!empty($contingencyData['startedById'])) {
+                    $user = $this->entityManager->getRepository('App\Entity\User')->find($contingencyData['startedById']);
+                    if ($user) {
+                        $contingency->setStartedBy($user);
+                    }
+                }
+
+                // Persist contingency
+                $this->entityManager->persist($contingency);
+                $processedContingencies[] = $contingency->getId();
+            }
 
             // Create a pending sync event
             $syncEvent = new SyncEvent();
@@ -332,13 +350,15 @@ class SyncController extends AbstractController
             // Location will be determined when processing the data
 
             $this->entityManager->persist($syncEvent);
+            $syncEvents[] = $syncEvent->getId();
+
             $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
             $this->entityManager->flush();
 
             return $this->json([
-                'message' => 'Contingency data received and saved successfully',
-                'contingency_id' => $contingency->getId(),
-                'sync_event_id' => $syncEvent->getId()
+                'message' => sprintf('%d contingency(ies) data received and saved successfully', count($processedContingencies)),
+                'contingency_ids' => $processedContingencies,
+                'sync_event_ids' => $syncEvents
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Failed to process contingency data: ' . $e->getMessage()], 500);
