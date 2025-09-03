@@ -152,7 +152,7 @@ class SyncController extends AbstractController
             // }
 
             // Move file to a temporary location
-            $tempDir = sys_get_temp_dir() . '/pending_sync';
+            $tempDir = $this->container->get('http_kernel')->getProjectDir() . '/sync';
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
@@ -198,7 +198,7 @@ class SyncController extends AbstractController
             // }
 
             // Move file to a temporary location
-            $tempDir = sys_get_temp_dir() . '/pending_sync';
+            $tempDir = $this->container->get('http_kernel')->getProjectDir() . '/sync';
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
@@ -243,8 +243,9 @@ class SyncController extends AbstractController
             //     return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
             // }
 
+            $tempDir = $this->container->get('http_kernel')->getProjectDir() . '/sync';
+
             // Move file to a temporary location
-            $tempDir = sys_get_temp_dir() . '/pending_sync';
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
