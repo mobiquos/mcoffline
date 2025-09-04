@@ -24,7 +24,7 @@ class SyncEvent
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(length: 36, unique: true)]
+    #[ORM\Column(length: 36)]
     private ?string $syncId = null;
 
     #[ORM\Column]
