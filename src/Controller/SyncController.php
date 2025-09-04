@@ -141,6 +141,7 @@ class SyncController extends AbstractController
         try {
             // Handle CSV file upload for sales
             $uploadedFile = $request->files->get('file');
+            $syncId = $request->request->get('syncId');
 
             if (!$uploadedFile) {
                 return $this->json(['error' => 'No file uploaded'], 400);
@@ -152,12 +153,12 @@ class SyncController extends AbstractController
             // }
 
             // Move file to a temporary location
-            $tempDir = $this->container->get('http_kernel')->getProjectDir() . '/sync';
+            $tempDir = $this->getParameter('kernel.project_dir') . '/var/sync';
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
 
-            $fileName = 'sales_' . time() . '_' . uniqid() . '.csv';
+            $fileName = 'sales_' . str_replace(".", "_", $syncId) . '.csv';
             $filePath = $tempDir . '/' . $fileName;
             $uploadedFile->move($tempDir, $fileName);
 
@@ -165,6 +166,7 @@ class SyncController extends AbstractController
             $syncEvent = new SyncEvent();
             $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
             $syncEvent->setType(SyncEvent::TYPE_PUSH);
+            $syncEvent->setSyncId($syncId);
             // Location will be determined when processing the file
 
             $this->entityManager->persist($syncEvent);
@@ -187,6 +189,7 @@ class SyncController extends AbstractController
         try {
             // Handle CSV file upload for payments
             $uploadedFile = $request->files->get('file');
+            $syncId = $request->request->get('syncId');
 
             if (!$uploadedFile) {
                 return $this->json(['error' => 'No file uploaded'], 400);
@@ -198,12 +201,12 @@ class SyncController extends AbstractController
             // }
 
             // Move file to a temporary location
-            $tempDir = $this->container->get('http_kernel')->getProjectDir() . '/sync';
+            $tempDir = $this->getParameter('kernel.project_dir') . '/var/sync';
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
 
-            $fileName = 'payments_' . time() . '_' . uniqid() . '.csv';
+            $fileName = 'payments_' . str_replace(".", "_", $syncId) . '.csv';
             $filePath = $tempDir . '/' . $fileName;
             $uploadedFile->move($tempDir, $fileName);
 
@@ -211,6 +214,7 @@ class SyncController extends AbstractController
             $syncEvent = new SyncEvent();
             $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
             $syncEvent->setType(SyncEvent::TYPE_PUSH);
+            $syncEvent->setSyncId($syncId);
             // Location will be determined when processing the file
 
             $this->entityManager->persist($syncEvent);
@@ -243,9 +247,8 @@ class SyncController extends AbstractController
             //     return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
             // }
 
-            $tempDir = $this->container->get('http_kernel')->getProjectDir() . '/sync';
-
             // Move file to a temporary location
+            $tempDir = $this->getParameter('kernel.project_dir') . '/var/sync';
             if (!is_dir($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }

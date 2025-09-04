@@ -59,10 +59,10 @@ class ProcessPendingMainSyncCommand extends Command
 
         $io->info(sprintf('Found %d pending sync events to process.', count($pendingSyncEvents)));
 
-        $uploadsDirectory = $this->getApplication()->getKernel()->getProjectDir() . '/var/uploads/sync';
+        $uploadsDirectory = $this->getApplication()->getKernel()->getProjectDir() . '/var/sync';
 
         foreach ($pendingSyncEvents as $syncEvent) {
-            $io->info(sprintf('Processing sync event ID: %d', $syncEvent->getId()));
+            $io->info(sprintf('Processing sync event ID: %d', $syncEvent->getSyncId()));
 
             // Update status to in progress
             $syncEvent->setStatus(SyncEvent::STATUS_INPROGRESS);
@@ -76,9 +76,9 @@ class ProcessPendingMainSyncCommand extends Command
                 $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
                 $this->entityManager->flush();
 
-                $io->success(sprintf('Sync event ID: %d processed successfully', $syncEvent->getId()));
+                $io->success(sprintf('Sync event ID: %d processed successfully', $syncEvent->getSyncId()));
             } catch (\Exception $e) {
-                $io->error(sprintf('Error processing sync event ID: %d - %s', $syncEvent->getId(), $e->getMessage()));
+                $io->error(sprintf('Error processing sync event ID: %d - %s', $syncEvent->getSyncId(), $e->getMessage()));
                 $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
                 $this->entityManager->flush();
             }
@@ -89,7 +89,7 @@ class ProcessPendingMainSyncCommand extends Command
 
     private function processSalesFile(SyncEvent $syncEvent, string $uploadsDirectory, SymfonyStyle $io): void
     {
-        $filename = $syncEvent->getId() . '_sales.csv';
+        $filename = 'sales_' . str_replace(".", "_", $syncEvent->getSyncId()) . '.csv';
         $filepath = $uploadsDirectory . '/' . $filename;
 
         // Check if file exists
@@ -144,7 +144,7 @@ class ProcessPendingMainSyncCommand extends Command
         $io->info(sprintf('Processed %d sales', $salesProcessed));
 
         // Remove the file after processing
-        unlink($filepath);
+        // unlink($filepath);
     }
 
     private function transformDataToSale(array $data): Sale
@@ -175,7 +175,7 @@ class ProcessPendingMainSyncCommand extends Command
 
     private function processPaymentsFile(SyncEvent $syncEvent, string $uploadsDirectory, SymfonyStyle $io): void
     {
-        $filename = $syncEvent->getId() . '_payments.csv';
+        $filename = 'payments_' . str_replace(".", "_", $syncEvent->getSyncId()) . '.csv';
         $filepath = $uploadsDirectory . '/' . $filename;
 
         // Check if file exists
@@ -229,7 +229,7 @@ class ProcessPendingMainSyncCommand extends Command
         $io->info(sprintf('Processed %d payments', $paymentsProcessed));
 
         // Remove the file after processing
-        unlink($filepath);
+        // unlink($filepath);
     }
 
     private function transformDataToPayment(array $d): Payment
