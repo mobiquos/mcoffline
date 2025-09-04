@@ -6,6 +6,7 @@ use App\Entity\Contingency;
 use App\Entity\Sale;
 use App\Entity\SystemParameter;
 use App\Entity\User;
+use App\Filter\DateFilter;
 use App\Service\PrintVoucherService;
 use App\Service\QuoteService;
 use Doctrine\ORM\EntityManagerInterface;
@@ -52,27 +53,10 @@ class SaleMainCrudController extends AbstractCrudController
     public function configureFilters(Filters $filters): Filters
     {
         return $filters
-            ->add(DateTimeFilter::new('createdAt', 'Fecha de registro')->setFormTypeOption('value_type', DateType::class))
+            ->add(DateFilter::new('createdAt', 'Fecha de registro'))
             ->add(EntityFilter::new('contingency', 'Contingencia'))
             ->add(TextFilter::new('rut', 'RUT cliente'))
         ;
-    }
-
-    public function createIndexQueryBuilder(SearchDto $searchDto, EntityDto $entityDto, FieldCollection $fields, FilterCollection $filters): QueryBuilder
-    {
-        $qb = parent::createIndexQueryBuilder($searchDto, $entityDto, $fields, $filters);
-
-        $contingency = $this->em->getRepository(Contingency::class)->findBy([], ['id' => 'DESC'], 1, 0);
-        $contingency = current($contingency);
-
-        if ($contingency) {
-            $qb
-                ->andWhere('entity.contingency = :contingency')
-                ->setParameter('contingency', $contingency)
-            ;
-        }
-
-        return $qb;
     }
 
     public function configureCrud(Crud $crud): Crud

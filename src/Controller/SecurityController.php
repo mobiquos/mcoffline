@@ -2,7 +2,9 @@
 
 namespace App\Controller;
 
+use App\Entity\Contingency;
 use App\Repository\SyncEventRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -41,14 +43,17 @@ class SecurityController extends AbstractController
     }
 
     #[Route(path: '/secure/home', name: 'home')]
-    public function home(): Response
+    public function home(EntityManagerInterface $em): Response
     {
         $uploadDir = $this->getParameter('kernel.project_dir') . '/public/uploads/pdfs';
         $filepath = $uploadDir . '/manual.pdf';
         $pdfExists = file_exists($filepath);
 
+        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
+
         return $this->render('index.html.twig', [
             'pdfExists' => $pdfExists,
+            'contingency' => $contingency,
         ]);
     }
 }

@@ -116,13 +116,14 @@ class ContingencyCrudController extends AbstractCrudController
         $contingency = new Contingency();
         $contingency->setStartedAt(new \DateTime());
 
+        /** @var UserRepository */
+        $userRepository = $this->container->get('doctrine')->getRepository(User::class);
         if ($this->getUser() instanceof CodeAuthenticatedUser) {
-            /** @var UserRepository */
-            $userRepository = $this->container->get('doctrine')->getRepository(User::class);
             $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
             $contingency->setStartedBy($user);
         } else {
-            $contingency->setStartedBy($this->getUser());
+            $user = $userRepository->find($this->getUser()->getId());
+            $contingency->setStartedBy($user);
         }
 
         $locationCode = $this->container->get('doctrine')->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
@@ -185,7 +186,7 @@ class ContingencyCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         return [
-            IdField::new('id', "ID")->setDisabled(),
+            TextField::new('id', "ID")->setDisabled(),
             DateTimeField::new('startedAt', "Fecha/Hora Inicio")->hideWhenUpdating(),
             DateTimeField::new('endedAt', "Fecha/Hora Termino")->hideWhenCreating(),
             TextField::new('location.code', "Código Local")->setDisabled(),

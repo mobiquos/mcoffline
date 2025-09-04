@@ -26,6 +26,11 @@ class SaleValidator extends ConstraintValidator
                 ->addViolation();
         }
 
+        if (strlen($value->getFolio()) < 7 || strlen($value->getFolio()) > 8) {
+            $this->context->buildViolation($constraint->folioInvalidMessage)
+                ->atPath('folio')
+                ->addViolation();
+        }
         if (!Client::validateRut($value->getQuote()->getRut())) {
             $this->context->buildViolation($constraint->message)
                 ->setParameter('{{ rut }}', $value->getQuote()->getRut())

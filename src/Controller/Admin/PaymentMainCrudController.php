@@ -8,6 +8,7 @@ use App\Entity\Payment;
 use App\Entity\Quote;
 use App\Entity\SystemParameter;
 use App\Entity\User;
+use App\Filter\DateFilter;
 use App\Service\PrintVoucherService;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
@@ -47,7 +48,7 @@ class PaymentMainCrudController extends AbstractCrudController
     public function configureFilters(Filters $filters): Filters
     {
         return $filters
-            ->add(DateTimeFilter::new('createdAt', 'Fecha de registro')->setFormTypeOption('value_type', DateType::class))
+            ->add(DateFilter::new('createdAt', 'Fecha de registro'))
             ->add(EntityFilter::new('contingency', 'Contingencia'))
             ->add(TextFilter::new('rut', 'RUT cliente'))
         ;

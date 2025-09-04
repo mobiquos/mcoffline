@@ -19,12 +19,17 @@ class QuoteRepository extends ServiceEntityRepository
 
     public function findByPublicId(int $id): ?Quote
     {
-        return $this->createQueryBuilder('e')
+        $result = $this->createQueryBuilder('e')
+            ->join('e.contingency', 'contingency')
+            ->leftJoin('e.sale', 'sale')
             ->where('e.publicId = :publicId')
+            ->andWhere('sale.id is null and DATE(e.quoteDate) = :today and contingency.endedAt is null')
             ->setParameter('publicId', $id)
+            ->setParameter('today', (new \DateTime())->format("Y-m-d"))
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult();
+        return $result;
     }
 
     public function findByRut(string $rut): array

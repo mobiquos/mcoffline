@@ -22,15 +22,10 @@ class SaleRepository extends ServiceEntityRepository
         $qb = $this->createQueryBuilder('s')
             ->select('COUNT(s.id) as salesCount, SUM(q.totalAmount) as totalAmount')
             ->join('s.quote', 'q')
-            ->where('q.locationCode = :locationCode')
-            ->andWhere('q.quoteDate >= :startedAt')
-            ->setParameter('locationCode', $contingency->getLocation()->getCode())
-            ->setParameter('startedAt', $contingency->getStartedAt());
-
-        if ($contingency->getEndedAt()) {
-            $qb->andWhere('q.quoteDate <= :endedAt')
-                ->setParameter('endedAt', $contingency->getEndedAt());
-        }
+            ->join('s.contingency', 'c')
+            ->where('c.id = :contingencyId')
+            ->setParameter('contingencyId', $contingency->getId())
+        ;
 
         return $qb->getQuery()->getSingleResult();
     }
