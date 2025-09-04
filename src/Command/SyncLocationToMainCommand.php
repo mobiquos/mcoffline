@@ -196,8 +196,8 @@ class SyncLocationToMainCommand extends Command
         $qb = $this->entityManager->getRepository(Contingency::class)->createQueryBuilder('c');
 
         if (isset($criteria['createdAt'])) {
-            $qb->andWhere('c.createdAt > :createdAt')
-               ->setParameter('createdAt', $criteria['createdAt']);
+            $qb->andWhere('c.startedAt > :createdAt')
+               ->setParameter('startedAt', $criteria['createdAt']);
         }
 
         $qb->orderBy('c.createdAt', 'ASC');
