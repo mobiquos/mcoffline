@@ -36,7 +36,7 @@ use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class SaleCrudController extends AbstractCrudController
+class SaleMainCrudController extends AbstractCrudController
 {
     public function __construct(
         private readonly EntityManagerInterface $em,
@@ -58,7 +58,6 @@ class SaleCrudController extends AbstractCrudController
             ->add(TextFilter::new('rut', 'RUT cliente'))
         ;
     }
-
 
     public function configureCrud(Crud $crud): Crud
     {
@@ -137,9 +136,8 @@ class SaleCrudController extends AbstractCrudController
             fclose($handle);
         });
 
-        $location = $this->container->get('doctrine')->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Ventas_Local%s.csv"', $location->getValue()));
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Ventas_Compania.csv"'));
 
         return $response;
     }

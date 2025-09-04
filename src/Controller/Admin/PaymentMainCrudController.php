@@ -2,16 +2,17 @@
 
 namespace App\Controller\Admin;
 
+use App\Entity\Client;
 use App\Entity\Contingency;
-use App\Entity\Sale;
+use App\Entity\Payment;
+use App\Entity\Quote;
 use App\Entity\SystemParameter;
 use App\Entity\User;
 use App\Filter\DateFilter;
 use App\Service\PrintVoucherService;
-use App\Service\QuoteService;
 use Doctrine\ORM\EntityManagerInterface;
-use Doctrine\ORM\QueryBuilder;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
@@ -20,34 +21,28 @@ use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
 use EasyCorp\Bundle\EasyAdminBundle\Factory\FilterFactory;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
-use EasyCorp\Bundle\EasyAdminBundle\Field\DateField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
-use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\TextField;
-use EasyCorp\Bundle\EasyAdminBundle\Dto\SearchDto;
-use EasyCorp\Bundle\EasyAdminBundle\Dto\EntityDto;
-use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
-use EasyCorp\Bundle\EasyAdminBundle\Collection\FilterCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\DateTimeFilter;
-use EasyCorp\Bundle\EasyAdminBundle\Filter\TextFilter;
 use EasyCorp\Bundle\EasyAdminBundle\Filter\EntityFilter;
+use EasyCorp\Bundle\EasyAdminBundle\Filter\TextFilter;
 use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class SaleCrudController extends AbstractCrudController
+class PaymentMainCrudController extends AbstractCrudController
 {
-    public function __construct(
-        private readonly EntityManagerInterface $em,
-        private readonly QuoteService $quoteService,
-        private readonly PrintVoucherService $printVoucherService
-    ) {
+    private PrintVoucherService $printVoucherService;
+
+    public function __construct(PrintVoucherService $printVoucherService)
+    {
+        $this->printVoucherService = $printVoucherService;
     }
 
     public static function getEntityFqcn(): string
     {
-        return Sale::class;
+        return Payment::class;
     }
 
     public function configureFilters(Filters $filters): Filters
@@ -59,28 +54,25 @@ class SaleCrudController extends AbstractCrudController
         ;
     }
 
-
     public function configureCrud(Crud $crud): Crud
     {
         return $crud
-          ->setEntityLabelInPlural("Ventas")
-          ->setEntityLabelInSingular("Venta")
+            ->setEntityLabelInPlural('Pagos contingencia')
+            ->setEntityLabelInSingular('Pago')
             ->setDefaultSort(['id' => 'DESC'])
-          ->setPageTitle(Crud::PAGE_INDEX, "Ventas")
-          ->setHelp(Crud::PAGE_INDEX, "Listado de ventas realizadas durante la contigencia en curso.")
-        ;
+            ->setPageTitle(Crud::PAGE_INDEX, 'Pagos')
+            ->setHelp(Crud::PAGE_INDEX, 'Listado de pagos registrados en el sistema.');
     }
 
     public function configureFields(string $pageName): iterable
     {
         return [
-            DateTimeField::new('createdAt', 'Fecha')->setFormat('dd-MM-YYYY')->onlyOnIndex(),
+            DateTimeField::new('createdAt', 'Fecha')->formatValue(fn ($d) => $d->format("d-m-Y"))->onlyOnIndex(),
             TextField::new('contingency.location.code', 'Agencia')->onlyOnIndex(),
-            TextField::new('rut', 'RUT')->setDisabled(),
-            TextField::new('folio', 'Número de Boleta'),
-            IntegerField::new('quote.amount', 'Monto Capital')->setDisabled(),
-            IntegerField::new('quote.installments', 'Número Cuotas')->setDisabled(),
-            DateField::new('quote.billingDate', 'Primer Vencimiento')->setFormat('dd-MM-YYYY'),
+            TextField::new('rut', 'RUT Cliente')->setDisabled(true),
+            IntegerField::new('amount', 'Monto pago')->setDisabled(true),
+            TextField::new('paymentMethod', 'Medio pago')->setTemplatePath('admin/field/payment_method.html.twig'),
+            TextField::new('voucherId', 'Comprobante Externo'),
         ];
     }
 
@@ -104,42 +96,39 @@ class SaleCrudController extends AbstractCrudController
             ->update(Crud::PAGE_INDEX, Action::EDIT, fn(Action $action) => $action->displayIf(fn($entity) => $entity->getCreatedAt()->format("Ymd") == (new \DateTime)->format("Ymd")))
             ->setPermission('showVoucher', User::ROLE_SUPER_ADMIN)
             ->setPermission('reprintVoucher', User::ROLE_SUPER_ADMIN)
-            ->remove(Crud::PAGE_INDEX, Action::DELETE)
-            // ->remove(Crud::PAGE_INDEX, Action::EDIT)
-            ->remove(Crud::PAGE_INDEX, Action::NEW)
-        ;
+            ->disable(Action::DELETE, Action::NEW);
     }
 
     #[AdminAction(routeName: 'export_csv', routePath: '/export/csv')]
-    public function exportCsv(AdminContext $context): StreamedResponse
+    public function exportCsv(AdminContext $context, EntityManagerInterface $em): StreamedResponse
     {
         $fields = FieldCollection::new($this->configureFields(Crud::PAGE_INDEX));
         $filters = $this->container->get(FilterFactory::class)->create($context->getCrud()->getFiltersConfig(), $fields, $context->getEntity());
         $queryBuilder = $this->createIndexQueryBuilder($context->getSearch(), $context->getEntity(), $fields, $filters);
-        $sales = $queryBuilder->getQuery()->getResult();
+        $payments = $queryBuilder->getQuery()->getResult();
 
-        $response = new StreamedResponse(function () use ($sales) {
+        $payments = $queryBuilder->getQuery()->getResult();
+
+        $response = new StreamedResponse(function () use ($payments) {
             $handle = fopen('php://output', 'w+');
-            fputcsv($handle, ['Fecha', 'Agencia', 'RUT Cliente', 'Número de Boleta', 'Monto', 'Cuotas', 'Primer Vencimiento'], ';');
+            fputcsv($handle, ['Fecha', 'Agencia', 'RUT Cliente', 'Monto Pago', 'Medio Pago', 'Comprobante Externo'], ';');
 
-            foreach ($sales as $sale) {
+            foreach ($payments as $q) {
                 fputcsv($handle, [
-                    $sale->getContingency()->getStartedAt()->format('d-m-Y'),
-                    $sale->getQuote()->getLocationCode(),
-                    $sale->getRut(),
-                    $sale->getFolio(),
-                    $sale->getQuote()->getAmount(),
-                    $sale->getQuote()->getInstallments(),
-                    $sale->getQuote()->getBillingDate()->format('d-m-Y'),
+                    $q->getCreatedAt()->format('d-m-Y'),
+                    $q->getContingency()->getLocation()->getCode(),
+                    $q->getRut(),
+                    $q->getAmount(),
+                    $q->getPaymentMethod(),
+                    $q->getVoucherId(),
                 ], ';');
             }
 
             fclose($handle);
         });
 
-        $location = $this->container->get('doctrine')->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Ventas_Local%s.csv"', $location->getValue()));
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Pagos_Compania.csv"'));
 
         return $response;
     }
@@ -147,49 +136,31 @@ class SaleCrudController extends AbstractCrudController
     #[AdminAction(routeName: 'show_voucher', routePath: '/{entityId}/voucher')]
     public function showVoucher(AdminContext $context): Response
     {
-        $sale = $context->getEntity()->getInstance();
+        $payment = $context->getEntity()->getInstance();
+
         return $this->render('admin/voucher.html.twig', [
-            'voucher_content' => $sale->getVoucherContent(),
+            'voucher_content' => $payment->getVoucherContent(),
         ]);
     }
 
     #[AdminAction(routeName: 'reprint_voucher', routePath: '/{entityId}/reprint-voucher')]
     public function reprintVoucher(AdminContext $context): Response
     {
-        $sale = $context->getEntity()->getInstance();
+        $payment = $context->getEntity()->getInstance();
 
         try {
             // Print the voucher using the service
-            $success = $this->printVoucherService->printSaleVoucher($sale);
+            $success = $this->printVoucherService->printPaymentVoucher($payment);
 
             if ($success) {
                 $this->addFlash('success', 'Voucher reimprimido exitosamente.');
             } else {
-                $this->addFlash('danger', 'Error al reimprimir el voucher.');
+                $this->addFlash('error', 'Error al reimprimir el voucher.');
             }
         } catch (\Exception $e) {
-            $this->addFlash('danger', 'Error al reimprimir el voucher: ' . $e->getMessage());
+            $this->addFlash('error', 'Error al reimprimir el voucher: ' . $e->getMessage());
         }
 
-        return $this->redirect($context->getReferrer() ?? $this->generateUrl('admin'));
-    }
-
-    public function updateEntity(EntityManagerInterface $entityManager, $entityInstance): void
-    {
-        // Recalculate quote values when sale is updated
-        if ($entityInstance instanceof Sale) {
-            $quote = $entityInstance->getQuote();
-            if ($quote) {
-                $calculation = $this->quoteService->calculateInstallment($quote);
-
-                $quote->setInterest($calculation['interest']);
-                $quote->setInstallmentAmount($calculation['installment_amount']);
-                $quote->setTotalAmount($calculation['total']);
-
-                $entityManager->persist($quote);
-            }
-        }
-
-        parent::updateEntity($entityManager, $entityInstance);
+        return $this->redirect($context->getReferrerUrl() ?? $this->generateUrl('admin'));
     }
 }

@@ -1,0 +1,19 @@
+{% extends "@EasyAdmin/crud/edit.html.twig" %}
+
+{% form_theme edit_form "@EasyAdmin/crud/form_theme.html.twig" %}
+
+{% block main %}
+{% block edit_form %}
+{{ form(edit_form) }}
+{% endblock %}
+<script>
+    document.getElementById("User_rol").addEventListener('change', (evt) => {
+        if (evt.target.value == 'ROLE_CASHIER' || evt.target.value == 'ROLE_SELLER') {
+            document.getElementById("User_plainPassword").parentElement.parentElement.classList.add("d-none");
+        } else {
+            document.getElementById("User_plainPassword").parentElement.parentElement.classList.remove("d-none");
+        }
+    });
+    document.getElementById("User_rol").dispatchEvent(new Event('change'));
+</script>
+{% endblock %}

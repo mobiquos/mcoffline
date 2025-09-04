@@ -28,31 +28,30 @@ class SalesController extends AbstractController
     {
         $form = $this->createForm(QuoteSearchFormType::class, [], ['method' => 'GET']);
         $form->handleRequest($request);
+        $quoteId = null;
         $quote = null;
         $client = null;
         $sale = new Sale();
         $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
 
+
         if ($form->isSubmitted()) {
             $quoteId = $form->getData()['quote_id'];
-
-        } else {
+            $quote = $em->getRepository(Quote::class)->findByPublicId($quoteId);
+        } else if ($request->query->get('quoteId')) {
             // Check if quoteId was passed as a query parameter
             $quoteId = $request->query->get('quoteId');
+            $quote = $em->getRepository(Quote::class)->find($quoteId);
+            if ($quote === false) { $quote = null; }
         }
 
-
         if ($quoteId) {
-            // Handle quote selection from the quotes list
-            $quote = current($em->getRepository(Quote::class)->findByPublicId($quoteId));
-            if ($quote === false) { $quote = null; }
-
             if (!$quote) {
-                $this->addFlash('danger', 'La cotización no existe.');
+                $this->addFlash('danger', 'La simulación no existe.');
             } else {
                 $client = $em->getRepository(Client::class)->findOneBy(['rut' => $quote->getRut()]);
                 if ($quote->getSale()) {
-                    $this->addFlash('danger', 'Cotización no vigente.');
+                    $this->addFlash('danger', 'La simulación no está vigente.');
                     $quote = null;
                 }
             }
@@ -64,11 +63,11 @@ class SalesController extends AbstractController
             $quote = $em->getRepository(Quote::class)->find($quoteId);
 
             if (!$quote) {
-                $this->addFlash('danger', 'La cotización no existe.');
+                $this->addFlash('danger', 'La simulación no existe.');
             } else {
                 $client = $em->getRepository(Client::class)->findOneBy(['rut' => $quote->getRut()]);
                 if ($quote->getSale()) {
-                    $this->addFlash('danger', 'Cotización no vigente.');
+                    $this->addFlash('danger', 'La simulación no está vigente.');
                     $quote = null;
                 }
             }
@@ -159,7 +158,7 @@ class SalesController extends AbstractController
             ->andWhere('s.id IS NULL')
             ->setParameter('contingency', $contingency)
             ->setParameter('today', (new \DateTime())->format("Y-m-d"))
-            ->orderBy('q.quoteDate', 'DESC')
+            ->orderBy('q.id', 'DESC')
             ->getQuery()
             ->getScalarResult();
 

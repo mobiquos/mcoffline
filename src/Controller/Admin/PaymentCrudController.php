@@ -6,16 +6,20 @@ use App\Entity\Client;
 use App\Entity\Contingency;
 use App\Entity\Payment;
 use App\Entity\Quote;
+use App\Entity\SystemParameter;
 use App\Entity\User;
+use App\Filter\DateFilter;
 use App\Service\PrintVoucherService;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Factory\FilterFactory;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IntegerField;
@@ -44,7 +48,7 @@ class PaymentCrudController extends AbstractCrudController
     public function configureFilters(Filters $filters): Filters
     {
         return $filters
-            ->add(DateTimeFilter::new('createdAt', 'Fecha de registro')->setFormTypeOption('value_type', DateType::class))
+            ->add(DateFilter::new('createdAt', 'Fecha de registro'))
             ->add(EntityFilter::new('contingency', 'Contingencia'))
             ->add(TextFilter::new('rut', 'RUT cliente'))
         ;
@@ -55,6 +59,7 @@ class PaymentCrudController extends AbstractCrudController
         return $crud
             ->setEntityLabelInPlural('Pagos contingencia')
             ->setEntityLabelInSingular('Pago')
+            ->setDefaultSort(['id' => 'DESC'])
             ->setPageTitle(Crud::PAGE_INDEX, 'Pagos')
             ->setHelp(Crud::PAGE_INDEX, 'Listado de pagos registrados en el sistema.');
     }
@@ -97,8 +102,12 @@ class PaymentCrudController extends AbstractCrudController
     #[AdminAction(routeName: 'export_csv', routePath: '/export/csv')]
     public function exportCsv(AdminContext $context, EntityManagerInterface $em): StreamedResponse
     {
-        $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
-        $payments = $em->getRepository(Payment::class)->findBy(['contingency' => $contingency]);
+        $fields = FieldCollection::new($this->configureFields(Crud::PAGE_INDEX));
+        $filters = $this->container->get(FilterFactory::class)->create($context->getCrud()->getFiltersConfig(), $fields, $context->getEntity());
+        $queryBuilder = $this->createIndexQueryBuilder($context->getSearch(), $context->getEntity(), $fields, $filters);
+        $payments = $queryBuilder->getQuery()->getResult();
+
+        $payments = $queryBuilder->getQuery()->getResult();
 
         $response = new StreamedResponse(function () use ($payments) {
             $handle = fopen('php://output', 'w+');
@@ -118,8 +127,9 @@ class PaymentCrudController extends AbstractCrudController
             fclose($handle);
         });
 
+        $location = $this->container->get('doctrine')->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Pagos_Local%s.csv"', $contingency->getLocation()->getCode()));
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Pagos_Local%s.csv"', $location->getValue()));
 
         return $response;
     }
@@ -138,11 +148,11 @@ class PaymentCrudController extends AbstractCrudController
     public function reprintVoucher(AdminContext $context): Response
     {
         $payment = $context->getEntity()->getInstance();
-        
+
         try {
             // Print the voucher using the service
             $success = $this->printVoucherService->printPaymentVoucher($payment);
-            
+
             if ($success) {
                 $this->addFlash('success', 'Voucher reimprimido exitosamente.');
             } else {
@@ -151,7 +161,7 @@ class PaymentCrudController extends AbstractCrudController
         } catch (\Exception $e) {
             $this->addFlash('error', 'Error al reimprimir el voucher: ' . $e->getMessage());
         }
-        
+
         return $this->redirect($context->getReferrerUrl() ?? $this->generateUrl('admin'));
     }
 }

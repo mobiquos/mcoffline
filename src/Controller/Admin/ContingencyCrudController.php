@@ -55,9 +55,17 @@ class ContingencyCrudController extends AbstractCrudController
             $location = $em->getRepository(Location::class)->findOneBy(['code' => $locationCode]);
             if ($location) {
                 $params['location'] = $location;
+                $today = new \DateTime();
+                $lastContingency = $em->getRepository(Contingency::class)->createQueryBuilder('entity')
+                    ->where('DATE(entity.startedAt) = :today and entity.endedAt is not null')
+                    ->orderBy('entity.startedAt', 'DESC')
+                    ->setParameter('today', $today->format("Y-m-d"))
+                    ->setMaxResults(1)
+                    ->getQuery()->getOneOrNullResult();
+                $params['last_contingency'] = $lastContingency;
+
                 $contingency = $em->getRepository(Contingency::class)->findOneBy(['endedAt' => null], ['id' => 'DESC']);
                 $params['contingency'] = $contingency;
-
                 if ($contingency) {
                     $report = $em->getRepository(Sale::class)->getContingencyReport($contingency);
                     $params['contingency_report'] = $report;
@@ -96,7 +104,7 @@ class ContingencyCrudController extends AbstractCrudController
             if ($syncAge > (int)$maxSyncAgeInDays->getValue()) {
                 $this->addFlash('danger', sprintf('La última sincronización fue hace %d días. No se puede iniciar una contingencia.', $syncAge));
                 $url = $this->container->get(AdminUrlGenerator::class)->setController(ContingencyCrudController::class)->setAction('openClose')->generateUrl();
-                return $this->redirect($url);
+                return $this->redirect($context->getReferrer());
             }
         }
 
@@ -108,13 +116,14 @@ class ContingencyCrudController extends AbstractCrudController
         $contingency = new Contingency();
         $contingency->setStartedAt(new \DateTime());
 
+        /** @var UserRepository */
+        $userRepository = $this->container->get('doctrine')->getRepository(User::class);
         if ($this->getUser() instanceof CodeAuthenticatedUser) {
-            /** @var UserRepository */
-            $userRepository = $this->container->get('doctrine')->getRepository(User::class);
             $user = $userRepository->find($this->getUser()->getOriginalUser()->getId());
             $contingency->setStartedBy($user);
         } else {
-            $contingency->setStartedBy($this->getUser());
+            $user = $userRepository->find($this->getUser()->getId());
+            $contingency->setStartedBy($user);
         }
 
         $locationCode = $this->container->get('doctrine')->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
@@ -177,7 +186,7 @@ class ContingencyCrudController extends AbstractCrudController
     public function configureFields(string $pageName): iterable
     {
         return [
-            IdField::new('id', "ID")->setDisabled(),
+            TextField::new('id', "ID")->setDisabled(),
             DateTimeField::new('startedAt', "Fecha/Hora Inicio")->hideWhenUpdating(),
             DateTimeField::new('endedAt', "Fecha/Hora Termino")->hideWhenCreating(),
             TextField::new('location.code', "Código Local")->setDisabled(),
@@ -229,7 +238,7 @@ class ContingencyCrudController extends AbstractCrudController
         $response = new StreamedResponse(function () use ($contingencies) {
             $handle = fopen('php://output', 'w+');
             fputcsv($handle, [
-                'ID',
+                'ID Contingencia',
                 'Fecha/Hora Inicio',
                 'Fecha/Hora Termino',
                 'Código Local',
@@ -317,7 +326,7 @@ class ContingencyCrudController extends AbstractCrudController
         });
 
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Ventas_%s.csv"', $contingency->getId()));
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Ventas_Compania.csv"', $contingency->getId()));
 
         return $response;
     }
@@ -380,13 +389,7 @@ class ContingencyCrudController extends AbstractCrudController
             $this->updateEntity($em, $contingency);
             $this->addFlash('success', 'Contingencia reabierta.');
         }
-
-        $url = $this->container->get(AdminUrlGenerator::class)
-            ->setController(ContingencyCrudController::class)
-            ->setAction(Action::INDEX)
-            ->generateUrl();
-
-        return $this->redirect($url);
+        return $this->redirectToRoute('admin_contingency_open_close');
     }
 
     public function close(AdminContext $context): RedirectResponse
@@ -407,5 +410,10 @@ class ContingencyCrudController extends AbstractCrudController
             ->generateUrl();
 
         return $this->redirect($url);
+    }
+
+    protected function getRedirectResponseAfterSave(AdminContext $context, string $action): RedirectResponse
+    {
+        return $this->redirectToRoute('admin_contingency_open_close');
     }
 }

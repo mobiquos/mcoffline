@@ -35,7 +35,7 @@ class SimulationForm extends AbstractType
                 'label' => 'RUT',
                 'attr' => [
                     'placeholder' => 'ESCRIBE EL RUT (14265878K)',
-                    'maxlength' => 10,
+                    'maxlength' => 12,
                 ],
                 'required' => true,
             ])

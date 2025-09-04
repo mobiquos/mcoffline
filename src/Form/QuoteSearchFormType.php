@@ -16,7 +16,7 @@ class QuoteSearchFormType extends AbstractType
                 'label' => false,
                 'required' => true,
                 'attr' => [
-                    'placeholder' => 'ID de la Cotización',
+                    'placeholder' => 'Número de Simulación',
                     'class' => 'form-control',
                 ],
             ]);
@@ -25,8 +25,6 @@ class QuoteSearchFormType extends AbstractType
     public function configureOptions(OptionsResolver $resolver): void
     {
         $resolver->setDefaults([
-            // Configure your form options here
-            'name' => 'a'
         ]);
     }
 }

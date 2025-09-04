@@ -40,6 +40,8 @@ class UserCrudController extends AbstractCrudController
         return $crud
             ->setEntityLabelInPlural("Usuarios")
             ->setEntityLabelInSingular("Usuario")
+            ->overrideTemplate('crud/new', 'admin/user/new.html.twig')
+            ->overrideTemplate('crud/edit', 'admin/user/edit.html.twig')
             ->setHelp(Crud::PAGE_INDEX, "Listado de usuarios registrados en el sistema.");
     }
 

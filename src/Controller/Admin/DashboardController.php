@@ -210,12 +210,18 @@ class DashboardController extends AbstractDashboardController
 
         yield MenuItem::section("Detalle contingencias");
         if ($systemVersion->getValue() == "main") {
-            yield MenuItem::linkToCrud('Ventas Multicentro', 'fas fa-dollar', Sale::class);
-            yield MenuItem::linkToCrud('Pagos Multicentro', 'fas fa-money-bill', Payment::class);
+            yield MenuItem::linkToCrud('Ventas Multicentro', 'fas fa-dollar', Sale::class)->setController(SaleMainCrudController::class);
+            yield MenuItem::linkToCrud('Pagos Multicentro', 'fas fa-money-bill', Payment::class)->setController(PaymentMainCrudController::class);
         } else {
-            yield MenuItem::linkToCrud('Simulaciones de Crédito', 'fas fa-file', Quote::class)->setPermission('ROLE_ADMIN');
-            yield MenuItem::linkToCrud('Ventas', 'fas fa-dollar', Sale::class);
-            yield MenuItem::linkToCrud('Pagos', 'fas fa-money-bill', Payment::class);
+            $today = new \DateTime();
+            yield MenuItem::linkToCrud('Simulaciones de Crédito', 'fas fa-file', Quote::class)->setPermission('ROLE_ADMIN')->setQueryParameter('filters[quoteDate][comparison]', "=")->setQueryParameter('filters[quoteDate][value]', $today->format("Y-m-d"));
+            yield MenuItem::linkToCrud('Ventas', 'fas fa-dollar', Sale::class)
+                ->setController(SaleCrudController::class)
+                ->setQueryParameter('filters[createdAt]', $today->format("Y-m-d"));
+
+            yield MenuItem::linkToCrud('Pagos', 'fas fa-money-bill', Payment::class)
+                ->setController(PaymentCrudController::class)
+                ->setQueryParameter('filters[createdAt]', $today->format("Y-m-d"));
         }
         // yield MenuItem::linkToCrud('Ventas Sysretail', 'fas fa-dollar', Sale::class)->setPermission('ROLE_ADMIN');
         // yield MenuItem::linkToCrud('Pagos Sysretail', 'fas fa-money-bill', Payment::class)->setPermission('ROLE_ADMIN');

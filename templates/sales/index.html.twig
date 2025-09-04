@@ -23,12 +23,11 @@
 
     <div class="card mb-4">
         <div class="card-body">
-            <h5 class="card-title">Buscar Cotización</h5>
             {{ form_start(form, { action: path('app_sales') }) }}
                 <div class="input-group">
                     {{ form_widget(form.quote_id) }}
                     <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-search"></i> Buscar Simulación
+                        <i class="bi bi-search"></i> Seleccionar Simulación
                     </button>
                 </div>
             {{ form_end(form) }}
