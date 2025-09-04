@@ -30,7 +30,7 @@ use Symfony\Component\Form\Extension\Core\Type\DateType;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
-class PaymentCrudController extends AbstractCrudController
+class PaymentMainCrudController extends AbstractCrudController
 {
     private PrintVoucherService $printVoucherService;
 
@@ -126,9 +126,8 @@ class PaymentCrudController extends AbstractCrudController
             fclose($handle);
         });
 
-        $location = $this->container->get('doctrine')->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
         $response->headers->set('Content-Type', 'text/csv; charset=utf-8');
-        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Pagos_Local%s.csv"', $location->getValue()));
+        $response->headers->set('Content-Disposition', sprintf('attachment; filename="Contingencia_Pagos_Compania.csv"'));
 
         return $response;
     }

@@ -645,6 +645,7 @@ class LocationToAdminSyncService
                 $response = $this->httpClient->request('POST', $url, [
                     'body' => [
                         'file' => fopen($paymentsFile, 'r'),
+                        'syncId' => $syncId,
                     ]
                 ]);
 

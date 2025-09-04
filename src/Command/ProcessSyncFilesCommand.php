@@ -49,7 +49,7 @@ class ProcessSyncFilesCommand extends Command
             $io->info(sprintf('Processing sync event ID: %d', $syncEvent->getId()));
 
             // Update status to in progress
-            $syncEvent->setStatus(SyncEvent::STATUS_INPROGRESS);
+            // $syncEvent->setStatus(SyncEvent::STATUS_INPROGRESS);
             $this->entityManager->flush();
 
             try {

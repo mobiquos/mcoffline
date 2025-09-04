@@ -17,14 +17,14 @@ class QuoteRepository extends ServiceEntityRepository
         parent::__construct($registry, Quote::class);
     }
 
-    public function findByPublicId(int $id): array
+    public function findByPublicId(int $id): ?Quote
     {
         return $this->createQueryBuilder('e')
             ->where('e.publicId = :publicId')
             ->setParameter('publicId', $id)
             ->setMaxResults(1)
             ->getQuery()
-            ->getResult();
+            ->getOneOrNullResult();
     }
 
     public function findByRut(string $rut): array

@@ -80,6 +80,9 @@
                 <h5 class="card-title mt-3">No hay contigencias activas en este Local.</h5>
                 <p class="card-text">El sistema de ventas está desactivado.</p>
                 <a href="{{ ea_url().setController('App\\Controller\\Admin\\ContingencyCrudController').setAction('new') }}" class="btn btn-primary w-50">Activar contingencia</a>
+                {% if last_contingency is defined and last_contingency != null %}
+                <a href="{{ ea_url().setController('App\\Controller\\Admin\\ContingencyCrudController').setAction('reopenContingency').setEntityId(last_contingency.id) }}" class="btn btn-secondary w-50 mt-3">Reabrir ultima contingencia</a>
+                {% endif %}
             </div>
             {% endif %}
 

@@ -8,12 +8,14 @@ use App\Entity\Sale;
 use App\Entity\User;
 use Doctrine\ORM\EntityManagerInterface;
 use EasyCorp\Bundle\EasyAdminBundle\Attribute\AdminAction;
+use EasyCorp\Bundle\EasyAdminBundle\Collection\FieldCollection;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Action;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Actions;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Crud;
 use EasyCorp\Bundle\EasyAdminBundle\Config\Filters;
 use EasyCorp\Bundle\EasyAdminBundle\Context\AdminContext;
 use EasyCorp\Bundle\EasyAdminBundle\Controller\AbstractCrudController;
+use EasyCorp\Bundle\EasyAdminBundle\Factory\FilterFactory;
 use EasyCorp\Bundle\EasyAdminBundle\Field\AssociationField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\DateTimeField;
 use EasyCorp\Bundle\EasyAdminBundle\Field\IdField;
@@ -59,7 +61,7 @@ class QuoteCrudController extends AbstractCrudController
     {
         return [
             IdField::new('publicId', 'ID Simulación'),
-            IdField::new('contingency.id', 'ID Contingencia'),
+            TextField::new('contingency.id', 'ID Contingencia'),
             TextField::new('contingency.location.code', 'Agencia'),
             TextField::new('rut', 'RUT cliente')->onlyOnForms(),
             DateTimeField::new('quoteDate', 'Fecha')->formatValue(fn ($d) => $d->format("d-m-Y")),
@@ -87,8 +89,10 @@ class QuoteCrudController extends AbstractCrudController
     #[AdminAction(routeName: 'export_csv', routePath: '/export/csv')]
     public function exportCsv(AdminContext $context): StreamedResponse
     {
-        $contingency = $this->em->getRepository(Contingency::class)->findOneBy(['endedAt' => null]);
-        $quotes = $this->em->getRepository(Quote::class)->findBy(['contingency' => $contingency]);
+        $fields = FieldCollection::new($this->configureFields(Crud::PAGE_INDEX));
+        $filters = $this->container->get(FilterFactory::class)->create($context->getCrud()->getFiltersConfig(), $fields, $context->getEntity());
+        $queryBuilder = $this->createIndexQueryBuilder($context->getSearch(), $context->getEntity(), $fields, $filters);
+        $quotes = $queryBuilder->getQuery()->getResult();
 
         $response = new StreamedResponse(function () use ($quotes) {
             $handle = fopen('php://output', 'w+');

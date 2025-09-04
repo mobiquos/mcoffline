@@ -50,7 +50,7 @@
                     disabled>
             </div>
             <div class="col-6">
-                <label class="form-label">Total Costo Crédito</label>
+                <label class="form-label">Costo Total Crédito</label>
                 <input type="text" class="form-control" value="${{ total|number_format(0, ',', '.') }}" disabled>
             </div>
         </div>
@@ -77,8 +77,8 @@
 
 <script>
     const formatter = new Intl.NumberFormat("de-DE"); // dot for thousands, comma for decimals
-    function setupFormattedNumberInput(input) {
 
+    function setupFormattedNumberInput(input) {
         input.addEventListener("input", () => {
             let raw = input.value.replace(/\D/g, ""); // only digits
             input.dataset.raw = raw;
@@ -87,7 +87,6 @@
             // Clear error when typing
             removeError(input);
         });
-
 
         input.form.addEventListener("submit", (e) => {
             let rawValue = input.dataset.raw || "";
@@ -118,10 +117,10 @@
     }
 
     function cleanInput() {
-            let rawValue = input.dataset.raw || "";
-            let numeric = rawValue ? parseInt(rawValue, 10) : NaN;
-            input.value = numeric;
-        }
+        let rawValue = input.dataset.raw || "";
+        let numeric = rawValue ? parseInt(rawValue, 10) : NaN;
+        input.value = numeric;
+    }
 
     function showError(input, message) {
         removeError(input);
@@ -164,6 +163,18 @@
     const panelClient = document.querySelector('#panel-client');
 
     if (rutInput) {
+        // Format RUT on input
+        rutInput.addEventListener('input', (evt) => {
+            // Format the RUT value as the user types
+            let rutValue = rutInput.value;
+            // Remove any existing formatting to avoid double formatting
+            let rut = cleanRut(rutValue);
+            // Format the clean RUT
+            if (rut.length > 0) {
+                rutInput.value = formatRut(rut);
+            }
+        });
+
         rutInput.addEventListener('keyup', debounce((evt) => {
             panelClient.innerHTML = "";
             alertsRut.innerHTML = "";

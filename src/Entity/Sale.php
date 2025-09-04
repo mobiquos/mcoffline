@@ -114,7 +114,7 @@ class Sale
 
     public function setRut(string $rut): static
     {
-        $this->rut = $rut;
+        $this->rut = str_replace(["-", "."], "",  $rut);
 
         return $this;
     }
