@@ -1,6 +1,11 @@
 <?php
 namespace App\Security;
 
+use App\Entity\Contingency;
+use App\Entity\Location;
+use App\Entity\SystemParameter;
+use App\Entity\User;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -17,9 +22,11 @@ class UserCodeAuthenticator extends AbstractLoginFormAuthenticator
 
     private UrlGeneratorInterface $urlGenerator;
     private UserRepository $userRepository;
+    private EntityManagerInterface $entityManager;
 
-    public function __construct(UrlGeneratorInterface $urlGenerator, UserRepository $userRepository)
+    public function __construct(UrlGeneratorInterface $urlGenerator, UserRepository $userRepository, EntityManagerInterface $em)
     {
+        $this->entityManager = $em;
         $this->urlGenerator = $urlGenerator;
         $this->userRepository = $userRepository;
     }
@@ -40,6 +47,41 @@ class UserCodeAuthenticator extends AbstractLoginFormAuthenticator
                     throw new CustomUserMessageAuthenticationException('Usuario no encontrado.');
                 }
 
+                if (!$user->isEnabled()) {
+                    throw new CustomUserMessageAuthenticationException('El usuario no está habilitado para iniciar sesión.');
+                }
+
+
+                if (!(in_array(User::ROLE_LOCATION_ADMIN, $user->getRoles(), true) or in_array(User::ROLE_ADMIN, $user->getRoles(), true) or in_array(User::ROLE_SUPER_ADMIN, $user->getRoles(), true))) {
+                    if (in_array(User::ROLE_USER, $user->getRoles(), true)) {
+                        $locationCode = $this->entityManager->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_LOCATION_CODE]);
+                        if (!$locationCode) {
+                            throw new CustomUserMessageAuthenticationException('La configuración del sistema está incompleta.');
+                        }
+
+                        $location = $this->entityManager->getRepository(Location::class)->findOneBy(['code' => (string) $locationCode->getValue()]);
+                        if (!$location) {
+                            throw new CustomUserMessageAuthenticationException('El local indicado en la configuración no corresponde a uno de los locales registrados.');
+                        }
+
+                        if (!$location->isEnabled()) {
+                            throw new CustomUserMessageAuthenticationException('Este local está desactivado.');
+                        }
+                        if (!$user->getLocation()) {
+                            throw new CustomUserMessageAuthenticationException('Este usuario no tiene una tienda asignada.');
+                        }
+
+                        if ($user->getLocation()->getId() !== $location->getId()) {
+                            throw new CustomUserMessageAuthenticationException('El usuario no pertenece a esta tienda.');
+                        }
+
+                        $activeContingency = $this->entityManager->getRepository(Contingency::class)->findOneBy(['location' => $location, 'endedAt' => null], ['id' => 'DESC']);
+                        if (!$activeContingency) {
+                            throw new CustomUserMessageAuthenticationException('El inicio de sesión para este usuario solo está permitido durante un período de contingencia activo.');
+                        }
+                    }
+                }
+
                 return new CodeAuthenticatedUser($user, array_merge(['ROLE_CODE_AUTH'], $user->getRoles()));
             })
         );
@@ -47,6 +89,12 @@ class UserCodeAuthenticator extends AbstractLoginFormAuthenticator
 
     public function onAuthenticationSuccess(Request $request, \Symfony\Component\Security\Core\Authentication\Token\TokenInterface $token, string $firewallName): ?Response
     {
+        $sessionLifetime = $this->entityManager->getRepository(SystemParameter::class)->findOneBy(['code' => SystemParameter::PARAM_SESSION_LIFETIME]);
+        $minutes = ((int) $sessionLifetime->getValue() ?? 10);
+        if ($sessionLifetime) {
+            $request->getSession()->migrate(false, (int) $minutes * 60);
+        }
+
         // redirect somewhere after code login (basic access)
         return new \Symfony\Component\HttpFoundation\RedirectResponse(
             $this->urlGenerator->generate('home')
