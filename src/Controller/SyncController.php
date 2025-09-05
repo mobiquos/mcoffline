@@ -3,6 +3,9 @@
 namespace App\Controller;
 
 use App\Entity\Location;
+use App\Entity\Payment;
+use App\Entity\Quote;
+use App\Entity\Sale;
 use App\Entity\SyncEvent;
 use App\Repository\ClientRepository;
 use App\Repository\LocationRepository;
@@ -162,20 +165,10 @@ class SyncController extends AbstractController
             $filePath = $tempDir . '/' . $fileName;
             $uploadedFile->move($tempDir, $fileName);
 
-            // Create a pending sync event
-            $syncEvent = new SyncEvent();
-            $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
-            $syncEvent->setType(SyncEvent::TYPE_PUSH);
-            $syncEvent->setSyncId($syncId);
-            // Location will be determined when processing the file
-
-            $this->entityManager->persist($syncEvent);
-            $this->entityManager->flush();
-
             return $this->json([
                 'message' => 'Sales CSV file uploaded successfully',
                 'file_path' => $filePath,
-                'sync_event_id' => $syncEvent->getId(),
+                // 'sync_event_id' => $syncEvent->getId(),
                 'count' => 0 // Will be updated when processing
             ]);
         } catch (\Exception $e) {
@@ -210,70 +203,14 @@ class SyncController extends AbstractController
             $filePath = $tempDir . '/' . $fileName;
             $uploadedFile->move($tempDir, $fileName);
 
-            // Create a pending sync event
-            $syncEvent = new SyncEvent();
-            $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
-            $syncEvent->setType(SyncEvent::TYPE_PUSH);
-            $syncEvent->setSyncId($syncId);
-            // Location will be determined when processing the file
-
-            $this->entityManager->persist($syncEvent);
-            $this->entityManager->flush();
-
             return $this->json([
                 'message' => 'Payments CSV file uploaded successfully',
                 'file_path' => $filePath,
-                'sync_event_id' => $syncEvent->getId(),
+                // 'sync_event_id' => $syncEvent->getId(),
                 'count' => 0 // Will be updated when processing
             ]);
         } catch (\Exception $e) {
             return $this->json(['error' => 'Failed to upload payments CSV: ' . $e->getMessage()], 500);
-        }
-    }
-
-    #[Route('/sync/push/quotes-csv', name: 'app_sync_push_quotes_csv', methods: ['POST'])]
-    public function pushQuotesCsv(Request $request): JsonResponse
-    {
-        try {
-            // Handle CSV file upload for quotes
-            $uploadedFile = $request->files->get('file');
-
-            if (!$uploadedFile) {
-                return $this->json(['error' => 'No file uploaded'], 400);
-            }
-
-            // Validate file type
-            // if ($uploadedFile->getExtension() !== 'csv') {
-            //     return $this->json(['error' => 'Invalid file type. Only CSV files are allowed.'], 400);
-            // }
-
-            // Move file to a temporary location
-            $tempDir = $this->getParameter('kernel.project_dir') . '/var/sync';
-            if (!is_dir($tempDir)) {
-                mkdir($tempDir, 0755, true);
-            }
-
-            $fileName = 'quotes_' . time() . '_' . uniqid() . '.csv';
-            $filePath = $tempDir . '/' . $fileName;
-            $uploadedFile->move($tempDir, $fileName);
-
-            // Create a pending sync event
-            $syncEvent = new SyncEvent();
-            $syncEvent->setStatus(SyncEvent::STATUS_PENDING);
-            $syncEvent->setType(SyncEvent::TYPE_PUSH);
-            // Location will be determined when processing the file
-
-            $this->entityManager->persist($syncEvent);
-            $this->entityManager->flush();
-
-            return $this->json([
-                'message' => 'Quotes CSV file uploaded successfully',
-                'file_path' => $filePath,
-                'sync_event_id' => $syncEvent->getId(),
-                'count' => 0 // Will be updated when processing
-            ]);
-        } catch (\Exception $e) {
-            return $this->json(['error' => 'Failed to upload quotes CSV: ' . $e->getMessage()], 500);
         }
     }
 
@@ -335,6 +272,10 @@ class SyncController extends AbstractController
                     $contingency = new \App\Entity\Contingency();
                     $contingency->setId($contingencyData['id']);
                 }
+                    $this->entityManager->getRepository(Sale::class)->createQueryBuilder('e')->delete()->where('e.contingency = :cid')->setParameter('cid', $contingency->getId())->getQuery()->getResult();
+                    $this->entityManager->getRepository(Quote::class)->createQueryBuilder('e')->delete()->where('e.contingency = :cid')->setParameter('cid', $contingency->getId())->getQuery()->getResult();
+                    $this->entityManager->getRepository(Payment::class)->createQueryBuilder('e')->delete()->where('e.contingency = :cid')->setParameter('cid', $contingency->getId())->getQuery()->getResult();
+                    $this->entityManager->flush();
 
                 // Set contingency properties
                 $contingency->setLocationCode($contingencyData['locationCode']);
@@ -372,7 +313,7 @@ class SyncController extends AbstractController
 
             $this->entityManager->persist($syncEvent);
             $syncEvent->setComments($syncEvent->getComments() . "\nTermino sincronizacion contingencias");
-            $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
+            // $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
             $this->entityManager->flush();
 
             return $this->json([
