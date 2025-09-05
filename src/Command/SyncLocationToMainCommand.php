@@ -62,12 +62,29 @@ class SyncLocationToMainCommand extends Command
         ]);
 
         if ($inProgressSync) {
-            $io->error(sprintf(
-                'Another synchronization is already in progress for this location (ID: %d, started at: %s). Please wait for it to complete.',
-                $inProgressSync->getId(),
-                $inProgressSync->getCreatedAt()->format('Y-m-d H:i:s')
-            ));
-            return Command::FAILURE;
+            // Check if the in-progress sync is older than 10 minutes
+            $tenMinutesAgo = new \DateTime('-10 minutes');
+            $createdAt = $inProgressSync->getCreatedAt();
+
+            if ($createdAt < $tenMinutesAgo) {
+                // Mark the old in-progress sync as failed
+                $inProgressSync->setStatus(SyncEvent::STATUS_FAILED);
+                $inProgressSync->setComments($inProgressSync->getComments() . '\nSynchronization timed out after 10 minutes');
+                $this->entityManager->persist($inProgressSync);
+                $this->entityManager->flush();
+
+                $io->warning(sprintf(
+                    'Previous synchronization (ID: %d) timed out after 10 minutes. Marking as failed and continuing with new sync.',
+                    $inProgressSync->getId()
+                ));
+            } else {
+                $io->error(sprintf(
+                    'Another synchronization is already in progress for this location (ID: %d, started at: %s). Please wait for it to complete.',
+                    $inProgressSync->getId(),
+                    $inProgressSync->getCreatedAt()->format('Y-m-d H:i:s')
+                ));
+                return Command::FAILURE;
+            }
         }
 
         try {
@@ -92,25 +109,25 @@ class SyncLocationToMainCommand extends Command
                 'errors' => []
             ];
 
-                $io->info(sprintf('Syncing %d contingencies together', count($contingenciesToSync)));
+            $io->info(sprintf('Syncing %d contingencies together', count($contingenciesToSync)));
 
-                // Initiate the synchronization process for all contingencies
-                $results = $this->locationToAdminSyncService->syncMultipleContingenciesToAdmin($location, $contingenciesToSync);
+            // Initiate the synchronization process for all contingencies
+            $results = $this->locationToAdminSyncService->syncMultipleContingenciesToAdmin($location, $contingenciesToSync);
 
-                $totalResults['sales_synced'] += $results['sales_synced'];
-                $totalResults['payments_synced'] += $results['payments_synced'];
-                $totalResults['quotes_synced'] += $results['quotes_synced'];
-                $totalResults['contingencies_synced'] += $results['contingencies_synced'];
-                if (!empty($results['errors'])) {
-                    $totalResults['errors'] = array_merge($totalResults['errors'], $results['errors']);
+            $totalResults['sales_synced'] += $results['sales_synced'];
+            $totalResults['payments_synced'] += $results['payments_synced'];
+            $totalResults['quotes_synced'] += $results['quotes_synced'];
+            $totalResults['contingencies_synced'] += $results['contingencies_synced'];
+            if (!empty($results['errors'])) {
+                $totalResults['errors'] = array_merge($totalResults['errors'], $results['errors']);
+            }
+
+            if (!empty($results['errors'])) {
+                $io->warning('Errors encountered while syncing contingencies:');
+                foreach ($results['errors'] as $error) {
+                    $io->text('  - ' . $error);
                 }
-
-                if (!empty($results['errors'])) {
-                    $io->warning('Errors encountered while syncing contingencies:');
-                    foreach ($results['errors'] as $error) {
-                        $io->text('  - ' . $error);
-                    }
-                }
+            }
 
             if (empty($totalResults['errors'])) {
                 $io->success(sprintf(

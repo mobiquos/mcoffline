@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Client;
 use App\Entity\Contingency;
 use App\Entity\Location;
 use App\Entity\Sale;
@@ -105,15 +106,17 @@ class LocationToAdminSyncService
             if (!empty($uploadResults['errors'])) {
                 $results['errors'] = array_merge($results['errors'], $uploadResults['errors']);
             }
+            $comments = $syncEvent->getComments();
+            $syncEvent = $this->syncEventRepository->find($syncEvent->getId());
 
+            $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
             // Update sync event status
-            if (empty($results['errors'])) {
-                $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
-            } else {
+            if (!empty($results['errors'])) {
                 $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
             }
 
             $syncEvent->setComments($syncEvent->getComments() . "\nTermino sincronizacion ventas y otros.");
+            // $this->em->persist($syncEvent);
             $this->em->flush();
 
             // Clean up temporary CSV files
@@ -677,7 +680,7 @@ class LocationToAdminSyncService
     private function prepareSaleData(Sale $sale): array
     {
         $quote = $sale->getQuote();
-        $client = $this->em->getRepository('App\Entity\Client')->findOneBy(['rut' => $sale->getRut()]);
+        $client = $this->em->getRepository(Client::class)->findOneBy(['rut' => $sale->getRut()]);
 
         return [
             'id' => $sale->getId(),
@@ -715,7 +718,7 @@ class LocationToAdminSyncService
      */
     private function preparePaymentData(Payment $payment): array
     {
-        $client = $this->em->getRepository('App\Entity\Client')->findOneBy(['rut' => $payment->getRut()]);
+        $client = $this->em->getRepository(Client::class)->findOneBy(['rut' => $payment->getRut()]);
 
         return [
             'id' => $payment->getId(),
