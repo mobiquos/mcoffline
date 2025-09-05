@@ -15,7 +15,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 
 #[AsCommand(
-    name: 'app:location:push-data',
+    name: 'app:location:push',
     description: 'Synchronize sales and payments from location to main system',
 )]
 class SyncLocationToMainCommand extends Command
@@ -30,17 +30,12 @@ class SyncLocationToMainCommand extends Command
     protected function configure(): void
     {
         $this
-            ->addOption('contingency-id', null, InputOption::VALUE_REQUIRED, 'The contingency ID to sync (optional, if not provided will sync all since last successful sync)')
-            ->addOption('all-contingencies', null, InputOption::VALUE_NONE, 'Sync all contingencies regardless of last sync')
             ->setHelp('This command synchronizes sales and payments from a location to the admin system.');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-
-        $contingencyId = $input->getOption('contingency-id');
-        $allContingencies = $input->getOption('all-contingencies');
 
         // Get location code from system parameters
         $locationParam = $this->entityManager->getRepository(SystemParameter::class)->findByCode(SystemParameter::PARAM_LOCATION_CODE);
@@ -79,45 +74,9 @@ class SyncLocationToMainCommand extends Command
             // Determine which contingencies to sync
             $contingenciesToSync = [];
 
-            if ($contingencyId) {
-                // Sync specific contingency
-                $contingency = $this->entityManager->getRepository(Contingency::class)->find($contingencyId);
-                if (!$contingency) {
-                    $io->error(sprintf('Contingency with ID "%s" not found.', $contingencyId));
-                    return Command::FAILURE;
-                }
-                $contingenciesToSync[] = $contingency;
-                $io->info(sprintf('Syncing specific contingency ID "%s"', $contingencyId));
-            } else if ($allContingencies) {
-                // Sync all contingencies
-                $contingenciesToSync = $this->entityManager->getRepository(Contingency::class)->findAll();
-                $io->info('Syncing all contingencies');
-            } else {
-                // Sync contingencies since last successful sync
-                $lastSuccessfulSync = $this->entityManager->getRepository(SyncEvent::class)->findOneBy([
-                    'status' => SyncEvent::STATUS_SUCCESS,
-                    'type' => SyncEvent::TYPE_PUSH,
-                    'location' => $location
-                ], ['createdAt' => 'DESC']);
-
-                $criteria = [];
-                if ($lastSuccessfulSync) {
-                    $criteria['createdAt'] = $lastSuccessfulSync->getCreatedAt();
-                    $io->info(sprintf(
-                        'Syncing contingencies created since last successful sync (%s)',
-                        $lastSuccessfulSync->getCreatedAt()->format('Y-m-d H:i:s')
-                    ));
-                } else {
-                    $io->info('Syncing all contingencies (no previous successful sync found)');
-                }
-
-                $contingenciesToSync = $this->findContingenciesToSync($criteria);
-            }
-
-            if (empty($contingenciesToSync)) {
-                $io->info('No contingencies found to sync');
-                return Command::SUCCESS;
-            }
+            // Sync all contingencies
+            $contingenciesToSync = $this->findContingenciesToSync();
+            $io->info('Syncing all contingencies');
 
             $io->info(sprintf(
                 'Starting synchronization for location "%s" with %d contingencies',
@@ -188,19 +147,17 @@ class SyncLocationToMainCommand extends Command
     /**
      * Find contingencies to sync based on criteria
      *
-     * @param array $criteria Search criteria
      * @return Contingency[] Array of contingencies to sync
      */
-    private function findContingenciesToSync(array $criteria = []): array
+    private function findContingenciesToSync(): array
     {
         $qb = $this->entityManager->getRepository(Contingency::class)->createQueryBuilder('c');
 
-        if (isset($criteria['createdAt'])) {
-            $qb->andWhere('c.startedAt > :createdAt')
-               ->setParameter('startedAt', $criteria['createdAt']);
-        }
+        $qb
+            ->where('DATE(c.startedAt) = :today')
+            ->setParameter('today', (new \DateTime())->format("Y-m-d"));
 
-        $qb->orderBy('c.createdAt', 'ASC');
+        $qb->orderBy('c.startedAt', 'ASC');
 
         return $qb->getQuery()->getResult();
     }

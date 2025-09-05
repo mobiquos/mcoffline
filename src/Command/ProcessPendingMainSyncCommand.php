@@ -109,12 +109,12 @@ class ProcessPendingMainSyncCommand extends Command
         $salesProcessed = 0;
 
         // Skip header row
-        fgetcsv($file);
+        $headers = fgetcsv($file);
 
         while (($data = fgetcsv($file)) !== false) {
             $lineNumber++;
             try {
-                $sale = $this->transformDataToSale($data);
+                $sale = $this->transformDataToSale(array_combine($headers, $data));
                 $user = $this->entityManager->getRepository(User::class)->find($data['createdById']);
                 $device = $this->entityManager->getRepository(Device::class)->find($data['deviceId']);
                 $contingency = $this->entityManager->getRepository(Contingency::class)->find($data['contingencyId']);
@@ -147,28 +147,27 @@ class ProcessPendingMainSyncCommand extends Command
         // unlink($filepath);
     }
 
-    private function transformDataToSale(array $data): Sale
+    private function transformDataToSale(array $d): Sale
     {
         $s = new Sale();
         $q = new Quote();
 
-        $d = $data['quote'];
-        $q->setAmount($d['amount']);
-        $q->setPaymentMethod($d['paymentMethod']);
-        $q->setTbkNumber($d['tbkNumber']);
-        $q->setLocationCode($d['locationCode']);
-        $q->setQuoteDate((new \DateTime())->createFromFormat("Y-m-d", $d['quoteDate']));
+        $q->setAmount($d['quote_amount']);
+        $q->setPaymentMethod($d['quote_paymentMethod']);
+        $q->setTbkNumber($d['quote_tbkNumber']);
+        $q->setLocationCode($d['quote_locationCode']);
+        $q->setQuoteDate((new \DateTime())->createFromFormat("Y-m-d", $d['quote_quoteDate']));
         $q->setDownPayment(0);
-        $q->setInstallments($d['installments']);
-        $q->setInterest($d['interests']);
-        $q->setInstallmentAmount($d['installmentAmount']);
-        $q->setTotalAmount($d['totalAmount']);
-        $q->setPublicId($d['publicId']);
-        $q->setBillingDate((new \DateTime())->createFromFormat("Y-m-d", $d['billingDate']));
+        $q->setInstallments($d['quote_installments']);
+        $q->setInterest($d['quote_interests']);
+        $q->setInstallmentAmount($d['quote_installmentAmount']);
+        $q->setTotalAmount($d['quote_totalAmount']);
+        $q->setPublicId($d['quote_publicId']);
+        $q->setBillingDate((new \DateTime())->createFromFormat("Y-m-d", $d['quote_billingDate']));
         $s->setQuote($q);
-        $s->setFolio($data['folio']);
-        $s->setRut($data['rut']);
-        $s->setCreatedAt((new \DateTime())->createFromFormat("Y-m-d H:i:s", $data['createdAt']));
+        $s->setFolio($d['folio']);
+        $s->setRut($d['rut']);
+        $s->setCreatedAt((new \DateTime())->createFromFormat("Y-m-d H:i:s", $d['createdAt']));
 
         return $s;
     }
@@ -195,12 +194,12 @@ class ProcessPendingMainSyncCommand extends Command
         $paymentsProcessed = 0;
 
         // Skip header row
-        fgetcsv($file);
+        $headers = fgetcsv($file);
 
         while (($data = fgetcsv($file)) !== false) {
             $lineNumber++;
             try {
-                $p = $this->transformDataToPayment($data);
+                $p = $this->transformDataToPayment(array_combine($headers, $data));
                 $user = $this->entityManager->getRepository(User::class)->find($data['createdById']);
                 $device = $this->entityManager->getRepository(Device::class)->find($data['deviceId']);
                 $contingency = $this->entityManager->getRepository(Contingency::class)->find($data['contingencyId']);

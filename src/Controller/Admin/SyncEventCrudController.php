@@ -67,7 +67,7 @@ class SyncEventCrudController extends AbstractCrudController
     public function configureActions(Actions $actions): Actions
     {
         return $actions
-            ->remove(Crud::PAGE_INDEX, Action::DELETE)
+            // ->remove(Crud::PAGE_INDEX, Action::DELETE)
             ->remove(Crud::PAGE_INDEX, Action::EDIT)
             ->add(Crud::PAGE_INDEX, Action::new("manualSync", "Subir archivo de clientes", 'sync')->linkToCrudAction('manualSync')->createAsGlobalAction())
             ->update(Crud::PAGE_INDEX, Action::NEW, fn (Action $action) => $action->setLabel('Iniciar sincronización')->linkToCrudAction('startSync'));
