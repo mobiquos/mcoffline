@@ -59,10 +59,43 @@ class ProcessPendingMainSyncCommand extends Command
 
         $io->info(sprintf('Found %d pending sync events to process.', count($pendingSyncEvents)));
 
+        // Group sync events by location and identify the latest for each location
+        $syncEventsByLocation = [];
+        foreach ($pendingSyncEvents as $syncEvent) {
+            $locationId = $syncEvent->getLocation() ? $syncEvent->getLocation()->getId() : null;
+            if ($locationId) {
+                if (!isset($syncEventsByLocation[$locationId])) {
+                    $syncEventsByLocation[$locationId] = [];
+                }
+                $syncEventsByLocation[$locationId][] = $syncEvent;
+            }
+        }
+
+        // Identify the latest sync event for each location
+        $latestSyncEvents = [];
+        foreach ($syncEventsByLocation as $locationId => $syncEvents) {
+            // Sort by createdAt descending to get the latest first
+            usort($syncEvents, function ($a, $b) {
+                return $b->getCreatedAt() <=> $a->getCreatedAt();
+            });
+
+            // The first one is the latest
+            $latestSyncEvents[] = $syncEvents[0];
+
+            // Mark the rest as failed
+            for ($i = 1; $i < count($syncEvents); $i++) {
+                $syncEvent = $syncEvents[$i];
+                $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
+                $syncEvent->setComments('Skipped: newer sync event exists for this location');
+                $this->entityManager->flush();
+                $io->warning(sprintf('Marked sync event ID: %s as failed (skipped - newer event exists)', $syncEvent->getSyncId()));
+            }
+        }
+
         $uploadsDirectory = $this->getApplication()->getKernel()->getProjectDir() . '/var/sync';
 
-        foreach ($pendingSyncEvents as $syncEvent) {
-            $io->info(sprintf('Processing sync event ID: %d', $syncEvent->getSyncId()));
+        foreach ($latestSyncEvents as $syncEvent) {
+            $io->info(sprintf('Processing sync event ID: %s', $syncEvent->getSyncId()));
 
             // Update status to in progress
             $syncEvent->setStatus(SyncEvent::STATUS_INPROGRESS);
@@ -76,9 +109,9 @@ class ProcessPendingMainSyncCommand extends Command
                 $syncEvent->setStatus(SyncEvent::STATUS_SUCCESS);
                 $this->entityManager->flush();
 
-                $io->success(sprintf('Sync event ID: %d processed successfully', $syncEvent->getSyncId()));
+                $io->success(sprintf('Sync event ID: %s processed successfully', $syncEvent->getSyncId()));
             } catch (\Exception $e) {
-                $io->error(sprintf('Error processing sync event ID: %d - %s', $syncEvent->getSyncId(), $e->getMessage()));
+                $io->error(sprintf('Error processing sync event ID: %s - %s', $syncEvent->getSyncId(), $e->getMessage()));
                 $syncEvent->setStatus(SyncEvent::STATUS_FAILED);
                 $this->entityManager->flush();
             }
@@ -113,14 +146,16 @@ class ProcessPendingMainSyncCommand extends Command
 
         while (($data = fgetcsv($file)) !== false) {
             $lineNumber++;
+            $data = array_combine($headers, $data);
             try {
-                $sale = $this->transformDataToSale(array_combine($headers, $data));
+                $sale = $this->transformDataToSale($data);
                 $user = $this->entityManager->getRepository(User::class)->find($data['createdById']);
                 $device = $this->entityManager->getRepository(Device::class)->find($data['deviceId']);
                 $contingency = $this->entityManager->getRepository(Contingency::class)->find($data['contingencyId']);
 
                 if ($user) {
                     $sale->setCreatedBy($user);
+                    $sale->getQuote()->setCreatedBy($user);
                 }
 
                 if ($device) {
@@ -129,9 +164,9 @@ class ProcessPendingMainSyncCommand extends Command
 
                 if ($contingency) {
                     $sale->setContingency($contingency);
+                    $sale->getQuote()->setContingency($contingency);
                 }
 
-                $this->entityManager->persist($sale->getQuote());
                 $this->entityManager->persist($sale);
 
                 $salesProcessed++;
@@ -152,6 +187,7 @@ class ProcessPendingMainSyncCommand extends Command
         $s = new Sale();
         $q = new Quote();
 
+        $q->setRut($d['rut']);
         $q->setAmount($d['quote_amount']);
         $q->setPaymentMethod($d['quote_paymentMethod']);
         $q->setTbkNumber($d['quote_tbkNumber']);
@@ -159,7 +195,7 @@ class ProcessPendingMainSyncCommand extends Command
         $q->setQuoteDate((new \DateTime())->createFromFormat("Y-m-d", $d['quote_quoteDate']));
         $q->setDownPayment(0);
         $q->setInstallments($d['quote_installments']);
-        $q->setInterest($d['quote_interests']);
+        $q->setInterest($d['quote_interest']);
         $q->setInstallmentAmount($d['quote_installmentAmount']);
         $q->setTotalAmount($d['quote_totalAmount']);
         $q->setPublicId($d['quote_publicId']);
@@ -167,7 +203,7 @@ class ProcessPendingMainSyncCommand extends Command
         $s->setQuote($q);
         $s->setFolio($d['folio']);
         $s->setRut($d['rut']);
-        $s->setCreatedAt((new \DateTime())->createFromFormat("Y-m-d H:i:s", $d['createdAt']));
+        $s->setCreatedAt((new \DateTimeImmutable())->createFromFormat("Y-m-d H:i:s", $d['createdAt']));
 
         return $s;
     }
@@ -198,8 +234,9 @@ class ProcessPendingMainSyncCommand extends Command
 
         while (($data = fgetcsv($file)) !== false) {
             $lineNumber++;
+            $data = array_combine($headers, $data);
             try {
-                $p = $this->transformDataToPayment(array_combine($headers, $data));
+                $p = $this->transformDataToPayment($data);
                 $user = $this->entityManager->getRepository(User::class)->find($data['createdById']);
                 $device = $this->entityManager->getRepository(Device::class)->find($data['deviceId']);
                 $contingency = $this->entityManager->getRepository(Contingency::class)->find($data['contingencyId']);
